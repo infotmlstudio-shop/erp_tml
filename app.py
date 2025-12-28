@@ -275,6 +275,13 @@ def ausgaben_neu():
                 pdf_pfad = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(pdf_pfad)
         
+        # Prüfe ob DPD-Rechnung (für automatisches Abbuchen)
+        von_zielkonto_abgebucht = False
+        if lieferant_id:
+            lieferant = Lieferant.query.get(lieferant_id)
+            if lieferant and lieferant.name and 'DPD' in lieferant.name.upper():
+                von_zielkonto_abgebucht = True
+        
         buchung = Buchung(
             typ='Ausgabe',
             lieferant_id=lieferant_id,
@@ -284,7 +291,8 @@ def ausgaben_neu():
             titel=titel,
             pdf_pfad=pdf_pfad,
             jahr=datum.year,
-            quelle='Manuell'
+            quelle='Manuell',
+            von_zielkonto_abgebucht=von_zielkonto_abgebucht
         )
         
         db.session.add(buchung)
