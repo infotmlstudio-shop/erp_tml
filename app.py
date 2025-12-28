@@ -194,6 +194,8 @@ def ausgaben():
     
     # Buchungen nach Lieferant gruppiert
     ausgaben_dict = {}
+    ausgaben_summens = {}  # Dictionary für Gesamtbeträge
+    
     for lieferant in lieferanten:
         buchungen = Buchung.query.filter(
             Buchung.typ == 'Ausgabe',
@@ -202,6 +204,9 @@ def ausgaben():
         ).order_by(Buchung.datum.desc()).all()
         if buchungen:
             ausgaben_dict[lieferant] = buchungen
+            # Gesamtbetrag berechnen
+            gesamtbetrag = sum(float(b.betrag) for b in buchungen)
+            ausgaben_summens[lieferant] = gesamtbetrag
     
     # Buchungen ohne Lieferant
     buchungen_ohne_lieferant = Buchung.query.filter(
@@ -212,6 +217,9 @@ def ausgaben():
     
     if buchungen_ohne_lieferant:
         ausgaben_dict[None] = buchungen_ohne_lieferant
+        # Gesamtbetrag berechnen
+        gesamtbetrag = sum(float(b.betrag) for b in buchungen_ohne_lieferant)
+        ausgaben_summens[None] = gesamtbetrag
     
     # Jahre für Dropdown
     current_year = datetime.now().year
@@ -219,7 +227,7 @@ def ausgaben():
     end_year = current_year + 2
     jahre = list(range(start_year, end_year + 1))
     
-    return render_template('ausgaben.html', ausgaben_dict=ausgaben_dict, jahr=jahr, jahre=jahre)
+    return render_template('ausgaben.html', ausgaben_dict=ausgaben_dict, ausgaben_summens=ausgaben_summens, jahr=jahr, jahre=jahre)
 
 @app.route('/ausgaben/neu', methods=['GET', 'POST'])
 @login_required

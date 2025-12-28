@@ -13,10 +13,7 @@
 {% if ausgaben_dict %}
     {% for lieferant, buchungen in ausgaben_dict.items() %}
     {% set anzahl = buchungen|length %}
-    {% set gesamtbetrag = 0 %}
-    {% for buchung in buchungen %}
-        {% set gesamtbetrag = gesamtbetrag + buchung.betrag %}
-    {% endfor %}
+    {% set gesamtbetrag = ausgaben_summens.get(lieferant, 0.0) %}
     <div class="card mb-4">
         <div class="card-header bg-light">
             <h5 class="mb-0">
