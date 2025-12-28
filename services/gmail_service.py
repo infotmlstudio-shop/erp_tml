@@ -100,6 +100,7 @@ class GmailService:
         """E-Mails nach Label abrufen"""
         self._ensure_authenticated()
         if not self.service:
+            print("Warnung: Gmail-Service konnte nicht initialisiert werden")
             return []
         
         try:
@@ -155,7 +156,6 @@ class GmailService:
         if hasattr(current_app, 'config'):
             upload_folder = current_app.config['UPLOAD_FOLDER']
         else:
-            import os
             upload_folder = os.environ.get('UPLOAD_FOLDER', 'data/rechnungen')
         
         try:
