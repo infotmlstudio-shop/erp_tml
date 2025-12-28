@@ -36,7 +36,11 @@ class PDFService:
         """Betrag aus Text extrahieren"""
         # Verschiedene Muster für Beträge
         patterns = [
-            r'(?:Summe|Gesamt|Total|Betrag|Endbetrag|Zu zahlen)[\s:]*([\d.,]+)\s*€',
+            # Spezielles Format: ##BETRAGBRUTTO=1744,36##
+            r'##BETRAGBRUTTO=([\d.,]+)##',
+            r'##BETRAGNETTO=([\d.,]+)##',
+            # Standard-Muster
+            r'(?:Summe|Gesamt|Total|Betrag|Endbetrag|Zu zahlen|Brutto|Netto)[\s:]*([\d.,]+)\s*€',
             r'([\d.,]+)\s*€\s*(?:inkl|MwSt|inkl\.|MwSt\.)',
             r'([\d.,]+)\s*EUR',
             r'([\d.,]+)\s*€',
@@ -50,7 +54,17 @@ class PDFService:
             for match in matches:
                 try:
                     # Komma/Punkt als Dezimaltrenner behandeln
-                    amount_str = match.replace('.', '').replace(',', '.')
+                    # Prüfen ob es ein deutsches Format ist (Komma als Dezimaltrenner)
+                    if ',' in match and '.' in match:
+                        # Format: 1.744,36 -> 1744.36
+                        amount_str = match.replace('.', '').replace(',', '.')
+                    elif ',' in match:
+                        # Format: 1744,36 -> 1744.36
+                        amount_str = match.replace(',', '.')
+                    else:
+                        # Format: 1744.36 oder 1744
+                        amount_str = match
+                    
                     amount = float(amount_str)
                     if amount > 0:
                         amounts.append(amount)
