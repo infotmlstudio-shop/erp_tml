@@ -352,12 +352,22 @@ def gmail_sync():
         # Prüfe ob Service initialisiert wurde
         if not gmail_service.service:
             app.logger.error("Gmail-Service konnte nicht initialisiert werden")
-            # Debug-Info
+            # Debug-Info - prüfe auch absolute Pfade
             import os
             creds_path = app.config.get('GMAIL_CREDENTIALS_PATH', 'credentials/gmail_credentials.json')
             token_path = app.config.get('GMAIL_TOKEN_PATH', 'credentials/gmail_token.json')
-            app.logger.error(f"Credentials-Pfad: {creds_path}, existiert: {os.path.exists(creds_path)}")
-            app.logger.error(f"Token-Pfad: {token_path}, existiert: {os.path.exists(token_path)}")
+            
+            # Prüfe auch absolute Pfade
+            abs_creds = '/opt/erp_tml/credentials/gmail_credentials.json'
+            abs_token = '/opt/erp_tml/credentials/gmail_token.json'
+            
+            app.logger.error(f"Config Credentials-Pfad: {creds_path}, existiert: {os.path.exists(creds_path)}")
+            app.logger.error(f"Config Token-Pfad: {token_path}, existiert: {os.path.exists(token_path)}")
+            app.logger.error(f"Absoluter Credentials-Pfad: {abs_creds}, existiert: {os.path.exists(abs_creds)}")
+            app.logger.error(f"Absoluter Token-Pfad: {abs_token}, existiert: {os.path.exists(abs_token)}")
+            app.logger.error(f"App root_path: {app.root_path}")
+            app.logger.error(f"Working directory: {os.getcwd()}")
+            
             flash('Gmail-Service konnte nicht initialisiert werden. Bitte prüfen Sie die Gmail-Credentials.', 'error')
             return redirect(url_for('index'))
         
