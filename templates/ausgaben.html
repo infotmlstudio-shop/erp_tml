@@ -42,14 +42,14 @@
                             <td class="text-danger fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
                             <td style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
                             <td style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
-                            <td style="white-space: nowrap; text-align: center;">
+                            <td style="white-space: nowrap;">
                                 {% if buchung.quelle == 'Gmail' %}
                                     <span class="badge bg-info">Gmail</span>
                                 {% else %}
                                     <span class="badge bg-secondary">Manuell</span>
                                 {% endif %}
                             </td>
-                            <td style="text-align: center;">
+                            <td>
                                 {% if buchung.pdf_pfad %}
                                     <a href="{{ url_for('rechnungen', filename=buchung.pdf_pfad.split('/')[-1]) }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-file-pdf"></i>
