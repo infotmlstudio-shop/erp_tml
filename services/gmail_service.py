@@ -270,18 +270,49 @@ class GmailService:
                 
                 # Rechnungsnummer aus Dateiname extrahieren falls nicht im PDF gefunden
                 rechnungsnummer = pdf_data.get('rechnungsnummer', '')
-                if not rechnungsnummer or rechnungsnummer.lower() in ['template', 'belegnummer', 'rechnungsnummer', 'nummer']:
+                
+                # Prüfe ob Rechnungsnummer ungültig ist
+                def is_valid_date(date_str):
+                    """Prüft ob eine 8-stellige Zahl ein gültiges Datum ist"""
+                    if len(date_str) != 8 or not date_str.isdigit():
+                        return False
+                    try:
+                        year = int(date_str[:4])
+                        month = int(date_str[4:6])
+                        day = int(date_str[6:8])
+                        from datetime import datetime as dt
+                        dt(year, month, day)
+                        return 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31
+                    except:
+                        return False
+                
+                if not rechnungsnummer or rechnungsnummer.lower() in ['template', 'belegnummer', 'rechnungsnummer', 'nummer'] or is_valid_date(rechnungsnummer):
                     # Versuche aus Dateiname zu extrahieren
                     import re as re_module
+                    name_without_ext = filename.replace('.pdf', '').replace('.PDF', '')
+                    parts = name_without_ext.split('_')
+                    
                     # Verschiedene Formate im Dateinamen suchen
                     invoice_match = re_module.search(r'INVOICE[-/]?(\d+)', filename, re_module.IGNORECASE)
                     if invoice_match:
                         rechnungsnummer = invoice_match.group(1)
+                    elif len(parts) >= 3:
+                        # Format: 20251228_174528_45184639 - nimm letzten Teil
+                        neue_nr = parts[-1]
+                        if not is_valid_date(neue_nr):
+                            rechnungsnummer = neue_nr
+                    elif len(parts) == 2:
+                        # Format: 20251228_45184639
+                        neue_nr = parts[-1]
+                        if not is_valid_date(neue_nr):
+                            rechnungsnummer = neue_nr
                     else:
-                        # Suche nach Zahlen im Dateinamen (z.B. DPD-Rechnungen)
-                        number_match = re_module.search(r'(\d{6,})', filename)  # Mindestens 6 Ziffern
+                        # Suche nach Zahlen im Dateinamen
+                        number_match = re_module.search(r'(\d{6,})', filename)
                         if number_match:
-                            rechnungsnummer = number_match.group(1)
+                            neue_nr = number_match.group(1)
+                            if not is_valid_date(neue_nr):
+                                rechnungsnummer = neue_nr
                 
                 # Buchung erstellen
                 buchung = Buchung(
