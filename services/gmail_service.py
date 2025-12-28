@@ -42,11 +42,20 @@ class GmailService:
         
         # Pfade absolut machen falls relativ
         if not os.path.isabs(credentials_path):
-            # Relativer Pfad - vom Arbeitsverzeichnis oder Projekt-Root
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # Relativer Pfad - finde Projekt-Root (wo app.py liegt)
+            if hasattr(current_app, 'root_path'):
+                # Flask root_path ist das Verzeichnis wo app.py liegt
+                base_dir = current_app.root_path
+            else:
+                # Fallback: vom aktuellen Modul aus
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             credentials_path = os.path.join(base_dir, credentials_path)
+        
         if not os.path.isabs(token_path):
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            if hasattr(current_app, 'root_path'):
+                base_dir = current_app.root_path
+            else:
+                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             token_path = os.path.join(base_dir, token_path)
         
         # Token laden falls vorhanden
