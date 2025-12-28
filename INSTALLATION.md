@@ -254,29 +254,89 @@ chmod 600 /opt/erp_tml/credentials/gmail_credentials.json
 
 ### 8.3 Erste Gmail-Authentifizierung
 
+**Wichtig:** Die OAuth-Authentifizierung muss auf einem Rechner mit Browser durchgeführt werden (nicht auf dem Server).
+
+**Option 1: Mit Setup-Script (empfohlen)**
+
+1. **Auf Ihrem lokalen Rechner:**
+   ```bash
+   # Projekt-Verzeichnis öffnen
+   cd /pfad/zum/projekt
+   
+   # Virtual Environment aktivieren (falls vorhanden)
+   source venv/bin/activate  # oder: python3 -m venv venv && source venv/bin/activate
+   
+   # Abhängigkeiten installieren (falls noch nicht geschehen)
+   pip install google-auth-oauthlib
+   
+   # Gmail-Credentials auf lokalen Rechner kopieren
+   # (von Server: scp benutzer@server:/opt/erp_tml/credentials/gmail_credentials.json .)
+   
+   # Setup-Script ausführen
+   python scripts/setup_gmail_auth.py
+   ```
+
+2. **Folgen Sie den Anweisungen:**
+   - Pfad zu `gmail_credentials.json` eingeben
+   - Browser öffnet sich automatisch
+   - Mit Gmail-Account anmelden
+   - Berechtigung erteilen
+   - Token wird angezeigt und kann gespeichert werden
+
+3. **Token auf Server kopieren:**
+   ```bash
+   scp credentials/gmail_token.json benutzer@server:/opt/erp_tml/credentials/
+   ```
+
+**Option 2: Manuell mit Python**
+
+1. **Auf lokalem Rechner:**
+   ```bash
+   python3
+   ```
+   
+   ```python
+   from google_auth_oauthlib.flow import InstalledAppFlow
+   import json
+   
+   SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+   flow = InstalledAppFlow.from_client_secrets_file(
+       'credentials/gmail_credentials.json', SCOPES)
+   creds = flow.run_local_server(port=0)
+   
+   # Token speichern
+   with open('credentials/gmail_token.json', 'w') as f:
+       f.write(creds.to_json())
+   ```
+
+2. **Token auf Server kopieren:**
+   ```bash
+   scp credentials/gmail_token.json benutzer@server:/opt/erp_tml/credentials/
+   ```
+
+**Option 3: Direkt auf Server (nur wenn X11-Forwarding aktiviert)**
+
 ```bash
+# SSH mit X11-Forwarding
+ssh -X benutzer@server-ip
+
+# Auf Server
 cd /opt/erp_tml
 source venv/bin/activate
-
-# App temporär starten für OAuth-Flow
-python app.py
+python3
 ```
 
-**In einem anderen Terminal (oder lokal):**
-```bash
-# SSH-Tunnel für lokalen Zugriff (optional)
-ssh -L 5000:localhost:5000 benutzer@server-ip
+```python
+from google_auth_oauthlib.flow import InstalledAppFlow
+SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+flow = InstalledAppFlow.from_client_secrets_file(
+    'credentials/gmail_credentials.json', SCOPES)
+creds = flow.run_local_server(port=0)
+
+import json
+with open('credentials/gmail_token.json', 'w') as f:
+    f.write(creds.to_json())
 ```
-
-**Im Browser:**
-1. Öffnen Sie: `http://server-ip:5000` (oder `http://localhost:5000` wenn Tunnel)
-2. Login mit `admin` / `admin`
-3. Klicken Sie auf "Gmail synchronisieren"
-4. Browser öffnet sich für OAuth-Authentifizierung
-5. Mit Gmail-Account anmelden und Berechtigung erteilen
-6. Token wird automatisch in `credentials/gmail_token.json` gespeichert
-
-**App stoppen:** `Ctrl+C` im Terminal
 
 ---
 
