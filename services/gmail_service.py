@@ -303,9 +303,16 @@ class GmailService:
             Lieferant.gmail_label != ''
         ).all()
         
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Sync: Gefundene Lieferanten mit Labels: {len(lieferanten)}")
+        for lieferant in lieferanten:
+            logger.info(f"Sync: Prüfe Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'")
+        
         for lieferant in lieferanten:
             # Nachrichten für dieses Label abrufen
             messages = self.get_messages_by_label(lieferant.gmail_label)
+            logger.info(f"Sync: Lieferant '{lieferant.name}' - {len(messages)} E-Mails gefunden")
             
             for msg in messages:
                 message_id = msg['id']
@@ -342,7 +349,10 @@ class GmailService:
                 pdf_data = self.pdf_service.extract_invoice_data(pdf_path)
                 
                 if not pdf_data:
+                    logger.warning(f"Sync: PDF-Analyse fehlgeschlagen für {filename}")
                     continue
+                
+                logger.info(f"Sync: PDF analysiert - Betrag: {pdf_data.get('betrag')}, Datum: {pdf_data.get('datum')}, Rechnungsnummer: {pdf_data.get('rechnungsnummer')}")
                 
                 # Rechnungsnummer aus Dateiname extrahieren falls nicht im PDF gefunden
                 rechnungsnummer = pdf_data.get('rechnungsnummer', '')
