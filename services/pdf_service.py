@@ -42,6 +42,11 @@ class PDFService:
                 # Wenn kein Betrag gefunden, zeige ersten 500 Zeichen des Textes für Debugging
                 if not betrag:
                     logger.warning(f"PDF-Analyse: Kein Betrag gefunden. Erste 500 Zeichen: {full_text[:500]}")
+                    # Suche auch nach "Gesamt", "Total" etc. im Text
+                    import re
+                    gesamt_matches = re.findall(r'(?:Gesamt|Total|Summe|Totaal|Endbetrag)[\s:]*([\d.,]+)', full_text, re.IGNORECASE)
+                    if gesamt_matches:
+                        logger.warning(f"PDF-Analyse: Gefundene 'Gesamt/Total' Matches: {gesamt_matches}")
                 
                 return data if data['betrag'] else None
                 
@@ -60,21 +65,25 @@ class PDFService:
             # Spezielles Format: ##BETRAGBRUTTO=1744,36##
             r'##BETRAGBRUTTO=([\d.,]+)##',
             r'##BETRAGNETTO=([\d.,]+)##',
-            # Standard-Muster
-            r'(?:Summe|Gesamt|Total|Betrag|Endbetrag|Zu zahlen|Brutto|Netto)[\s:]*([\d.,]+)\s*€',
-            r'([\d.,]+)\s*€\s*(?:inkl|MwSt|inkl\.|MwSt\.)',
+            # Standard-Muster mit € Symbol
+            r'(?:Summe|Gesamt|Total|Betrag|Endbetrag|Zu zahlen|Brutto|Netto|Totaal|Totaalbedrag)[\s:]*([\d.,]+)\s*€',
+            r'([\d.,]+)\s*€\s*(?:inkl|MwSt|inkl\.|MwSt\.|BTW)',
             r'([\d.,]+)\s*EUR',
             r'([\d.,]+)\s*€',
             r'€\s*([\d.,]+)',
             # Weitere Muster für verschiedene Formate
-            r'(?:Amount|Total|Sum|Price)[\s:]*([\d.,]+)',
+            r'(?:Amount|Total|Sum|Price|Totaal)[\s:]*([\d.,]+)',
             r'([\d.,]+)\s*(?:EUR|€|Euro)',
+            # Muster ohne Währungssymbol (nur wenn nach "Gesamt", "Total" etc.)
+            r'(?:Gesamt|Total|Summe|Totaal|Endbetrag|Zu zahlen)[\s:]*([\d]{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)',
+            # Zahlen mit Tausender-Trennzeichen am Ende (wahrscheinlich Gesamtbetrag)
+            r'([\d]{1,3}(?:[.,]\d{3})*[.,]\d{2})\s*(?:€|EUR|Euro|BTW|inkl\.|MwSt)',
         ]
         
         # Suche nach größtem Betrag (wahrscheinlich Gesamtbetrag)
         amounts = []
         for pattern in patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
+            matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
             for match in matches:
                 try:
                     # Komma/Punkt als Dezimaltrenner behandeln
@@ -90,13 +99,41 @@ class PDFService:
                         amount_str = match
                     
                     amount = float(amount_str)
-                    if amount > 0:
+                    # Nur Beträge > 0 und < 1 Million akzeptieren (realistische Rechnungsbeträge)
+                    if 0 < amount < 1000000:
                         amounts.append(amount)
                 except (ValueError, InvalidOperation):
                     continue
         
         if amounts:
-            # Größten Betrag zurückgeben
+            # Größten Betrag zurückgeben (wahrscheinlich Gesamtbetrag)
+            return max(amounts)
+        
+        # Fallback: Suche nach großen Zahlen am Ende des Textes (oft Gesamtbetrag)
+        # Suche nach Zahlen mit 2 Dezimalstellen am Ende
+        fallback_patterns = [
+            r'([\d]{1,3}(?:[.,]\d{3})*[.,]\d{2})\s*$',  # Am Ende der Zeile
+            r'([\d]{1,3}(?:[.,]\d{3})*[.,]\d{2})\s*\n',  # Vor Zeilenumbruch
+        ]
+        
+        for pattern in fallback_patterns:
+            matches = re.findall(pattern, text, re.MULTILINE)
+            for match in matches:
+                try:
+                    if ',' in match and '.' in match:
+                        amount_str = match.replace('.', '').replace(',', '.')
+                    elif ',' in match:
+                        amount_str = match.replace(',', '.')
+                    else:
+                        amount_str = match
+                    
+                    amount = float(amount_str)
+                    if 1 <= amount < 1000000:  # Mindestens 1 EUR
+                        amounts.append(amount)
+                except (ValueError, InvalidOperation):
+                    continue
+        
+        if amounts:
             return max(amounts)
         
         return None
