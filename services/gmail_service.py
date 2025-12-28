@@ -400,6 +400,11 @@ class GmailService:
                             if not is_valid_date(neue_nr):
                                 rechnungsnummer = neue_nr
                 
+                # Prüfe ob DPD-Rechnung (für automatisches Abbuchen)
+                von_zielkonto_abgebucht = False
+                if lieferant and lieferant.name and 'DPD' in lieferant.name.upper():
+                    von_zielkonto_abgebucht = True
+                
                 # Buchung erstellen
                 buchung = Buchung(
                     typ=lieferant.typ,
@@ -411,7 +416,8 @@ class GmailService:
                     pdf_pfad=pdf_path,
                     jahr=(pdf_data.get('datum') or datetime.now().date()).year,
                     quelle='Gmail',
-                    gmail_message_id=message_id
+                    gmail_message_id=message_id,
+                    von_zielkonto_abgebucht=von_zielkonto_abgebucht
                 )
                 
                 db.session.add(buchung)

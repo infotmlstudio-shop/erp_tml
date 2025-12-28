@@ -53,6 +53,7 @@ class Buchung(db.Model):
     jahr = db.Column(db.Integer, nullable=False)
     quelle = db.Column(db.String(20), nullable=False, default='Manuell')  # 'Gmail' oder 'Manuell'
     gmail_message_id = db.Column(db.String(200), nullable=True)  # Zur Vermeidung von Duplikaten
+    von_zielkonto_abgebucht = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

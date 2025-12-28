@@ -229,6 +229,23 @@ def ausgaben():
     
     return render_template('ausgaben.html', ausgaben_dict=ausgaben_dict, ausgaben_summens=ausgaben_summens, jahr=jahr, jahre=jahre)
 
+@app.route('/ausgaben/zielkonto/<int:buchung_id>', methods=['POST'])
+@login_required
+def ausgaben_zielkonto(buchung_id):
+    """Status 'Von Zielkonto abgebucht' aktualisieren"""
+    try:
+        data = request.get_json()
+        abgebucht = data.get('abgebucht', False)
+        
+        buchung = Buchung.query.get_or_404(buchung_id)
+        buchung.von_zielkonto_abgebucht = abgebucht
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/ausgaben/neu', methods=['GET', 'POST'])
 @login_required
 def ausgaben_neu():

@@ -34,10 +34,11 @@
                 <table class="table table-hover ausgaben-table">
                     <thead>
                         <tr>
-                            <th style="width: 12%;">Datum</th>
-                            <th style="width: 12%;">Betrag</th>
-                            <th style="width: 25%;">Titel</th>
-                            <th style="width: 20%;">Rechnungsnummer</th>
+                            <th style="width: 10%;">Datum</th>
+                            <th style="width: 10%;">Betrag</th>
+                            <th style="width: 22%;">Titel</th>
+                            <th style="width: 18%;">Rechnungsnummer</th>
+                            <th style="width: 18%;">Von Zielkonto abgebucht</th>
                             <th style="width: 10%;">Quelle</th>
                             <th style="width: 8%;">PDF</th>
                         </tr>
@@ -49,6 +50,12 @@
                             <td class="text-danger fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
                             <td style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
                             <td style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
+                            <td style="text-align: center;">
+                                <input type="checkbox" 
+                                       class="form-check-input zielkonto-checkbox" 
+                                       data-buchung-id="{{ buchung.id }}"
+                                       {% if buchung.von_zielkonto_abgebucht %}checked{% endif %}>
+                            </td>
                             <td style="white-space: nowrap;">
                                 {% if buchung.quelle == 'Gmail' %}
                                     <span class="badge bg-info">Gmail</span>
@@ -83,3 +90,53 @@
 {% endif %}
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .zielkonto-checkbox {
+        cursor: pointer;
+        width: 1.25em;
+        height: 1.25em;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Checkbox-Änderungen speichern
+    document.querySelectorAll('.zielkonto-checkbox').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const buchungId = this.dataset.buchungId;
+            const checked = this.checked;
+            
+            // AJAX-Request zum Server
+            fetch('/ausgaben/zielkonto/' + buchungId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    abgebucht: checked
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Status aktualisiert');
+                } else {
+                    // Bei Fehler Checkbox zurücksetzen
+                    this.checked = !checked;
+                    alert('Fehler beim Aktualisieren: ' + (data.error || 'Unbekannter Fehler'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Bei Fehler Checkbox zurücksetzen
+                this.checked = !checked;
+                alert('Fehler beim Aktualisieren');
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
