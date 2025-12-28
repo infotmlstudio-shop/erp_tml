@@ -13,43 +13,43 @@
 <div class="card">
     <div class="card-body">
         {% if buchungen %}
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Datum</th>
-                        <th>Betrag</th>
-                        <th>Titel</th>
-                        <th>Rechnungsnummer</th>
-                        <th>Quelle</th>
-                        <th>PDF</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for buchung in buchungen %}
-                    <tr>
-                        <td>{{ buchung.datum.strftime('%d.%m.%Y') }}</td>
-                        <td class="text-success fw-bold">{{ "%.2f"|format(buchung.betrag) }} €</td>
-                        <td>{{ buchung.titel or '-' }}</td>
-                        <td>{{ buchung.rechnungsnummer or '-' }}</td>
-                        <td>
-                            {% if buchung.quelle == 'Gmail' %}
-                                <span class="badge bg-info">Gmail</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Manuell</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if buchung.pdf_pfad %}
-                                <a href="{{ url_for('rechnungen', filename=buchung.pdf_pfad.split('/')[-1]) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-file-pdf"></i>
-                                </a>
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
+            <div class="table-responsive">
+                <table class="table table-hover einnahmen-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">Datum</th>
+                            <th style="width: 12%;">Betrag</th>
+                            <th style="width: 25%;">Titel</th>
+                            <th style="width: 20%;">Rechnungsnummer</th>
+                            <th style="width: 10%;">Quelle</th>
+                            <th style="width: 8%;">PDF</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for buchung in buchungen %}
+                        <tr>
+                            <td style="white-space: nowrap;">{{ buchung.datum.strftime('%d.%m.%Y') }}</td>
+                            <td class="text-success fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
+                            <td style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
+                            <td style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
+                            <td style="white-space: nowrap; text-align: center;">
+                                {% if buchung.quelle == 'Gmail' %}
+                                    <span class="badge bg-info">Gmail</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Manuell</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: center;">
+                                {% if buchung.pdf_pfad %}
+                                    <a href="{{ url_for('rechnungen', filename=buchung.pdf_pfad.split('/')[-1]) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-file-pdf"></i>
+                                    </a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
                 </tbody>
             </table>
         </div>

@@ -30,6 +30,19 @@
         .stat-card.gewinn {
             border-left-color: #007bff;
         }
+        /* Konsistente Tabellen-Spaltenbreiten */
+        .ausgaben-table th,
+        .einnahmen-table th {
+            white-space: nowrap;
+        }
+        .ausgaben-table td,
+        .einnahmen-table td {
+            vertical-align: middle;
+        }
+        .ausgaben-table .text-danger,
+        .einnahmen-table .text-success {
+            text-align: right;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
