@@ -270,12 +270,18 @@ class GmailService:
                 
                 # Rechnungsnummer aus Dateiname extrahieren falls nicht im PDF gefunden
                 rechnungsnummer = pdf_data.get('rechnungsnummer', '')
-                if not rechnungsnummer or rechnungsnummer.lower() in ['template', 'belegnummer']:
-                    # Versuche aus Dateiname zu extrahieren: INVOICE-4937130.pdf -> 4937130
+                if not rechnungsnummer or rechnungsnummer.lower() in ['template', 'belegnummer', 'rechnungsnummer', 'nummer']:
+                    # Versuche aus Dateiname zu extrahieren
                     import re as re_module
+                    # Verschiedene Formate im Dateinamen suchen
                     invoice_match = re_module.search(r'INVOICE[-/]?(\d+)', filename, re_module.IGNORECASE)
                     if invoice_match:
                         rechnungsnummer = invoice_match.group(1)
+                    else:
+                        # Suche nach Zahlen im Dateinamen (z.B. DPD-Rechnungen)
+                        number_match = re_module.search(r'(\d{6,})', filename)  # Mindestens 6 Ziffern
+                        if number_match:
+                            rechnungsnummer = number_match.group(1)
                 
                 # Buchung erstellen
                 buchung = Buchung(

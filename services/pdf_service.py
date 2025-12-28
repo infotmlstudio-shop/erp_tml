@@ -110,14 +110,17 @@ class PDFService:
     def _extract_invoice_number(self, text):
         """Rechnungsnummer extrahieren"""
         patterns = [
-            # Belegnummer Format: "Belegnummer Datum Seite" gefolgt von Zahl (z.B. "4937130 08.12.2025")
+            # Belegnummer Format: "Belegnummer Datum Seite" gefolgt von Zahl
             r'Belegnummer\s+Datum\s+Seite\s*\n\s*(\d+)',
-            # Belegnummer direkt gefolgt von Zahl (ohne "Datum Seite")
+            # Belegnummer direkt gefolgt von Zahl
             r'Belegnummer\s+(\d+)',
-            # Spezielles Format: INVOICE-4937130 oder INVOICE-4909856 (aus Dateiname oder Text)
+            # Rechnungsnummer Format: "Rechnungsnummer" gefolgt von Nummer (nicht das Wort selbst!)
+            r'Rechnungsnummer\s*[:]?\s*([A-Z0-9\-/]+)',
+            r'Rechnungsnummer\s+([A-Z0-9\-/]+)',
+            # Spezielles Format: INVOICE-4937130
             r'INVOICE[-/](\d+)',
-            # Standard-Muster
-            r'(?:Rechnungsnummer|Rechnung|Invoice|Nr\.?|No\.?)[\s:]*([A-Z0-9\-/]+)',
+            # Standard-Muster (nur wenn nicht "Rechnungsnummer" selbst)
+            r'(?:Invoice|Nr\.?|No\.?)[\s:]*([A-Z0-9\-/]+)',
             r'#\s*([A-Z0-9\-/]+)',
             r'INV[-/]?([A-Z0-9\-/]+)',
         ]
@@ -126,8 +129,8 @@ class PDFService:
             matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
             if matches:
                 result = matches[0].strip()
-                # Prüfen ob es nicht nur "Belegnummer", "TEMPLATE" oder ähnliches ist
-                invalid = ['belegnummer', 'rechnung', 'invoice', 'nr', 'no', 'template', 'debitoren', 'xml']
+                # Prüfen ob es nicht nur "Belegnummer", "Rechnungsnummer" oder ähnliches ist
+                invalid = ['belegnummer', 'rechnung', 'rechnungsnummer', 'invoice', 'nr', 'no', 'template', 'debitoren', 'xml', 'nummer']
                 if result.lower() not in invalid and len(result) > 2:
                     return result
         
