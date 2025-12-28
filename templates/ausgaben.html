@@ -15,13 +15,17 @@
     <div class="card mb-4">
         <div class="card-header bg-light">
             <h5 class="mb-0">
-                {% if lieferant %}
-                    {{ lieferant.name }} Rechnungen
-                {% else %}
-                    Sonstige Ausgaben
-                {% endif %}
+                <button class="btn btn-link text-decoration-none text-dark p-0 w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ lieferant.id if lieferant else 'sonstige' }}" aria-expanded="true" aria-controls="collapse-{{ lieferant.id if lieferant else 'sonstige' }}">
+                    <i class="bi bi-chevron-down"></i>
+                    {% if lieferant %}
+                        {{ lieferant.name }} Rechnungen
+                    {% else %}
+                        Sonstige Ausgaben
+                    {% endif %}
+                </button>
             </h5>
         </div>
+        <div id="collapse-{{ lieferant.id if lieferant else 'sonstige' }}" class="collapse show" aria-labelledby="heading-{{ lieferant.id if lieferant else 'sonstige' }}">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover ausgaben-table">
@@ -63,6 +67,7 @@
                     </tbody>
                 </table>
             </div>
+        </div>
         </div>
     </div>
     {% endfor %}

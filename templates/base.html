@@ -39,6 +39,13 @@
         .einnahmen-table td {
             vertical-align: middle;
         }
+        /* Collapse Icon Animation */
+        .card-header button[data-bs-toggle="collapse"] .bi-chevron-down {
+            transition: transform 0.3s;
+        }
+        .card-header button[data-bs-toggle="collapse"][aria-expanded="false"] .bi-chevron-down {
+            transform: rotate(-90deg);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
