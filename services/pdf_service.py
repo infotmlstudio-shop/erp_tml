@@ -110,6 +110,11 @@ class PDFService:
     def _extract_invoice_number(self, text):
         """Rechnungsnummer extrahieren"""
         patterns = [
+            # Spezielles Format: INVOICE-4937130 oder INVOICE-4909856
+            r'INVOICE[-/]?([A-Z0-9\-]+)',
+            # Belegnummer Format: Belegnummer 4937130 oder Belegnummer Datum
+            r'Belegnummer\s+(\d+)',
+            # Standard-Muster
             r'(?:Rechnungsnummer|Rechnung|Invoice|Nr\.?|No\.?)[\s:]*([A-Z0-9\-/]+)',
             r'#\s*([A-Z0-9\-/]+)',
             r'INV[-/]?([A-Z0-9\-/]+)',
@@ -118,7 +123,10 @@ class PDFService:
         for pattern in patterns:
             matches = re.findall(pattern, text, re.IGNORECASE)
             if matches:
-                return matches[0].strip()
+                result = matches[0].strip()
+                # Prüfen ob es nicht nur "Belegnummer" ist
+                if result.lower() not in ['belegnummer', 'rechnung', 'invoice', 'nr', 'no']:
+                    return result
         
         return None
     
