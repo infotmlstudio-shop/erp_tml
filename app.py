@@ -35,8 +35,8 @@ def index():
     jahr = request.args.get('jahr', type=int)
     if not jahr:
         jahr = datetime.now().year
-        if jahr < 2026:
-            jahr = 2026
+        if jahr < 2025:
+            jahr = 2025
     
     # Kennzahlen für das ausgewählte Jahr
     einnahmen = db.session.query(db.func.sum(Buchung.betrag)).filter(
@@ -76,8 +76,8 @@ def index():
     
     # Jahre für Dropdown generieren
     current_year = datetime.now().year
-    start_year = 2026
-    end_year = current_year + 2 if current_year >= 2026 else 2028
+    start_year = 2025
+    end_year = current_year + 2
     jahre = list(range(start_year, end_year + 1))
     
     return render_template('dashboard.html', 
@@ -125,7 +125,7 @@ def einnahmen():
     jahr = request.args.get('jahr', type=int)
     if not jahr:
         current_year = datetime.now().year
-        jahr = current_year if current_year >= 2026 else 2026
+        jahr = current_year if current_year >= 2025 else 2025
     
     buchungen = Buchung.query.filter(
         Buchung.typ == 'Einnahme',
@@ -134,8 +134,8 @@ def einnahmen():
     
     # Jahre für Dropdown
     current_year = datetime.now().year
-    start_year = 2026
-    end_year = current_year + 2 if current_year >= 2026 else 2028
+    start_year = 2025
+    end_year = current_year + 2
     jahre = list(range(start_year, end_year + 1))
     
     return render_template('einnahmen.html', buchungen=buchungen, jahr=jahr, jahre=jahre)
@@ -187,7 +187,7 @@ def ausgaben():
     jahr = request.args.get('jahr', type=int)
     if not jahr:
         current_year = datetime.now().year
-        jahr = current_year if current_year >= 2026 else 2026
+        jahr = current_year if current_year >= 2025 else 2025
     
     # Alle aktiven Ausgaben-Lieferanten
     lieferanten = Lieferant.query.filter_by(typ='Ausgabe', aktiv=True).order_by(Lieferant.name).all()
@@ -215,8 +215,8 @@ def ausgaben():
     
     # Jahre für Dropdown
     current_year = datetime.now().year
-    start_year = 2026
-    end_year = current_year + 2 if current_year >= 2026 else 2028
+    start_year = 2025
+    end_year = current_year + 2
     jahre = list(range(start_year, end_year + 1))
     
     return render_template('ausgaben.html', ausgaben_dict=ausgaben_dict, jahr=jahr, jahre=jahre)
