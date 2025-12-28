@@ -39,8 +39,12 @@
         .einnahmen-table td {
             vertical-align: middle;
         }
-        .ausgaben-table .text-danger,
-        .einnahmen-table .text-success {
+        .ausgaben-table td.text-danger,
+        .einnahmen-table td.text-success {
+            text-align: right !important;
+        }
+        .ausgaben-table th:nth-child(2),
+        .einnahmen-table th:nth-child(2) {
             text-align: right;
         }
     </style>
