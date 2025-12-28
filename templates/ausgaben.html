@@ -54,7 +54,7 @@
                                 <input type="checkbox" 
                                        class="form-check-input zielkonto-checkbox" 
                                        data-buchung-id="{{ buchung.id }}"
-                                       {% if buchung.von_zielkonto_abgebucht %}checked{% endif %}>
+                                       {% if buchung.von_zielkonto_abgebucht == True or buchung.von_zielkonto_abgebucht == 1 %}checked{% endif %}>
                             </td>
                             <td style="white-space: nowrap;">
                                 {% if buchung.quelle == 'Gmail' %}
