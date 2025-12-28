@@ -45,6 +45,10 @@ class GmailService:
             credentials_path = current_app.config.get('GMAIL_CREDENTIALS_PATH', 'credentials/gmail_credentials.json')
             token_path = current_app.config.get('GMAIL_TOKEN_PATH', 'credentials/gmail_token.json')
         
+        # Debug: Logge die Pfade
+        print(f"DEBUG _authenticate: credentials_path={credentials_path}, isabs={os.path.isabs(credentials_path)}")
+        print(f"DEBUG _authenticate: token_path={token_path}, isabs={os.path.isabs(token_path)}")
+        
         # Pfade absolut machen falls relativ
         if not os.path.isabs(credentials_path):
             # Relativer Pfad - finde Projekt-Root (wo app.py liegt)
@@ -52,12 +56,15 @@ class GmailService:
                 if hasattr(current_app, 'root_path'):
                     # Flask root_path ist das Verzeichnis wo app.py liegt
                     base_dir = current_app.root_path
+                    print(f"DEBUG: Verwende current_app.root_path: {base_dir}")
                 else:
                     # Fallback: vom aktuellen Modul aus
                     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    print(f"DEBUG: Verwende Modul-Pfad: {base_dir}")
                 credentials_path = os.path.join(base_dir, credentials_path)
-            except:
+            except Exception as e:
                 # Wenn current_app nicht verfügbar, verwende absoluten Pfad
+                print(f"DEBUG: Exception bei Pfad-Auflösung: {e}, verwende /opt/erp_tml")
                 credentials_path = os.path.join('/opt/erp_tml', credentials_path.lstrip('/'))
         
         if not os.path.isabs(token_path):
@@ -67,8 +74,12 @@ class GmailService:
                 else:
                     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 token_path = os.path.join(base_dir, token_path)
-            except:
+            except Exception as e:
+                print(f"DEBUG: Exception bei Token-Pfad-Auflösung: {e}, verwende /opt/erp_tml")
                 token_path = os.path.join('/opt/erp_tml', token_path.lstrip('/'))
+        
+        print(f"DEBUG nach Pfad-Auflösung: credentials_path={credentials_path}, existiert={os.path.exists(credentials_path)}")
+        print(f"DEBUG nach Pfad-Auflösung: token_path={token_path}, existiert={os.path.exists(token_path)}")
         
         # Fallback: Wenn Datei nicht existiert, versuche absoluten Pfad
         if not os.path.exists(credentials_path):
