@@ -343,13 +343,21 @@ def lieferanten_loeschen(id):
 def gmail_sync():
     """Gmail-Synchronisation manuell auslösen"""
     try:
-        # Gmail-Service initialisieren und authentifizieren
+        # Gmail-Service initialisieren
         gmail_service = GmailService()
         
-        # Explizit authentifizieren
+        # Explizit authentifizieren (wichtig im Web-Kontext)
         gmail_service._ensure_authenticated()
         
+        # Prüfe ob Service initialisiert wurde
         if not gmail_service.service:
+            app.logger.error("Gmail-Service konnte nicht initialisiert werden")
+            # Debug-Info
+            import os
+            creds_path = app.config.get('GMAIL_CREDENTIALS_PATH', 'credentials/gmail_credentials.json')
+            token_path = app.config.get('GMAIL_TOKEN_PATH', 'credentials/gmail_token.json')
+            app.logger.error(f"Credentials-Pfad: {creds_path}, existiert: {os.path.exists(creds_path)}")
+            app.logger.error(f"Token-Pfad: {token_path}, existiert: {os.path.exists(token_path)}")
             flash('Gmail-Service konnte nicht initialisiert werden. Bitte prüfen Sie die Gmail-Credentials.', 'error')
             return redirect(url_for('index'))
         

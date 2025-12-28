@@ -27,6 +27,11 @@ class GmailService:
         """Stelle sicher, dass Authentifizierung durchgeführt wurde"""
         if not self._authenticated:
             self._authenticate()
+            # Prüfe ob Service initialisiert wurde
+            if not self.service:
+                print("Warnung: Service wurde nach _authenticate() nicht initialisiert")
+                print(f"  _authenticated: {self._authenticated}")
+                print(f"  service: {self.service}")
     
     def _authenticate(self):
         """Gmail API authentifizieren"""
@@ -73,7 +78,7 @@ class GmailService:
             else:
                 print(f"Warnung: Gmail-Credentials nicht gefunden: {credentials_path}")
                 print(f"  Fallback auch nicht gefunden: {fallback_credentials}")
-                return  # Authentifizierung nicht möglich
+                # Nicht return, sondern später prüfen
         
         if not os.path.exists(token_path):
             fallback_token = '/opt/erp_tml/credentials/gmail_token.json'
@@ -82,16 +87,33 @@ class GmailService:
         
         # Token laden falls vorhanden
         if os.path.exists(token_path):
-            creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+            try:
+                creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+            except Exception as e:
+                print(f"Fehler beim Laden des Tokens: {e}")
+                creds = None
+        else:
+            print(f"Token-Datei nicht gefunden: {token_path}")
+            creds = None
         
         # Wenn keine gültigen Credentials vorhanden, OAuth-Flow starten
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
+                try:
+                    creds.refresh(Request())
+                except Exception as e:
+                    print(f"Fehler beim Token-Refresh: {e}")
+                    creds = None
             else:
                 if not os.path.exists(credentials_path):
                     print(f"Warnung: Gmail-Credentials nicht gefunden: {credentials_path}")
-                    return
+                    # Prüfe nochmal Fallback
+                    fallback_creds = '/opt/erp_tml/credentials/gmail_credentials.json'
+                    if os.path.exists(fallback_creds):
+                        credentials_path = fallback_creds
+                    else:
+                        print(f"  Fallback auch nicht gefunden: {fallback_creds}")
+                        return
                 flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
                 
                 # Für Server-Umgebungen: Manueller OAuth-Flow
