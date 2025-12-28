@@ -40,6 +40,15 @@ class GmailService:
             credentials_path = current_app.config.get('GMAIL_CREDENTIALS_PATH', 'credentials/gmail_credentials.json')
             token_path = current_app.config.get('GMAIL_TOKEN_PATH', 'credentials/gmail_token.json')
         
+        # Pfade absolut machen falls relativ
+        if not os.path.isabs(credentials_path):
+            # Relativer Pfad - vom Arbeitsverzeichnis oder Projekt-Root
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            credentials_path = os.path.join(base_dir, credentials_path)
+        if not os.path.isabs(token_path):
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            token_path = os.path.join(base_dir, token_path)
+        
         # Token laden falls vorhanden
         if os.path.exists(token_path):
             creds = Credentials.from_authorized_user_file(token_path, SCOPES)
@@ -216,6 +225,7 @@ class GmailService:
         """Rechnungen aus Gmail synchronisieren"""
         self._ensure_authenticated()
         if not self.service:
+            print("Warnung: Gmail-Service konnte nicht initialisiert werden")
             return 0
         
         anzahl = 0

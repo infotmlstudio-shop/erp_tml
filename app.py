@@ -343,10 +343,29 @@ def lieferanten_loeschen(id):
 def gmail_sync():
     """Gmail-Synchronisation manuell auslösen"""
     try:
+        # Gmail-Service initialisieren und authentifizieren
         gmail_service = GmailService()
+        
+        # Explizit authentifizieren
+        gmail_service._ensure_authenticated()
+        
+        if not gmail_service.service:
+            flash('Gmail-Service konnte nicht initialisiert werden. Bitte prüfen Sie die Gmail-Credentials.', 'error')
+            return redirect(url_for('index'))
+        
+        # Synchronisation durchführen
         anzahl = gmail_service.sync_rechnungen()
-        flash(f'{anzahl} neue Rechnungen wurden importiert.', 'success')
+        
+        if anzahl > 0:
+            flash(f'{anzahl} neue Rechnungen wurden importiert.', 'success')
+        else:
+            flash('Keine neuen Rechnungen gefunden.', 'info')
+            
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        # Log für Debugging (wird in Gunicorn-Logs sichtbar sein)
+        app.logger.error(f"Gmail-Sync Fehler: {error_details}")
         flash(f'Fehler bei Gmail-Synchronisation: {str(e)}', 'error')
     
     return redirect(url_for('index'))
