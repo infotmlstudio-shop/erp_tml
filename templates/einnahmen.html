@@ -29,7 +29,7 @@
                     {% for buchung in buchungen %}
                     <tr>
                         <td style="white-space: nowrap;">{{ buchung.datum.strftime('%d.%m.%Y') }}</td>
-                        <td class="text-success fw-bold" style="white-space: nowrap; text-align: right;">{{ "%.2f"|format(buchung.betrag) }} €</td>
+                        <td class="text-success fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
                         <td style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
                         <td style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
                             <td style="white-space: nowrap; text-align: center;">
