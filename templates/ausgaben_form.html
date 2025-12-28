@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block page_title %}Neue Ausgabe{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>Neue Ausgabe hinzufügen</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="lieferant_id" class="form-label">Lieferant</label>
+                <select class="form-select" id="lieferant_id" name="lieferant_id">
+                    <option value="">-- Kein Lieferant --</option>
+                    {% for lieferant in lieferanten %}
+                    <option value="{{ lieferant.id }}">{{ lieferant.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="betrag" class="form-label">Betrag *</label>
+                <input type="number" step="0.01" class="form-control" id="betrag" name="betrag" required>
+            </div>
+            <div class="mb-3">
+                <label for="datum" class="form-label">Datum *</label>
+                <input type="date" class="form-control" id="datum" name="datum" required>
+            </div>
+            <div class="mb-3">
+                <label for="titel" class="form-label">Titel/Bezeichnung</label>
+                <input type="text" class="form-control" id="titel" name="titel">
+            </div>
+            <div class="mb-3">
+                <label for="rechnungsnummer" class="form-label">Rechnungsnummer</label>
+                <input type="text" class="form-control" id="rechnungsnummer" name="rechnungsnummer">
+            </div>
+            <div class="mb-3">
+                <label for="pdf" class="form-label">PDF-Anhang</label>
+                <input type="file" class="form-control" id="pdf" name="pdf" accept=".pdf">
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-check-circle"></i> Speichern
+                </button>
+                <a href="{{ url_for('ausgaben') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Abbrechen
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block page_title %}{% if lieferant %}Lieferant bearbeiten{% else %}Neuer Lieferant{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{% if lieferant %}Lieferant bearbeiten{% else %}Neuer Lieferant{% endif %}</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="name" class="form-label">Name *</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ lieferant.name if lieferant else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="typ" class="form-label">Typ *</label>
+                <select class="form-select" id="typ" name="typ" required>
+                    <option value="Einnahme" {% if lieferant and lieferant.typ == 'Einnahme' %}selected{% endif %}>Einnahme</option>
+                    <option value="Ausgabe" {% if lieferant and lieferant.typ == 'Ausgabe' %}selected{% endif %}>Ausgabe</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="gmail_label" class="form-label">Gmail-Label</label>
+                <input type="text" class="form-control" id="gmail_label" name="gmail_label" value="{{ lieferant.gmail_label if lieferant else '' }}" placeholder="z.B. Buchhaltung-Ausgaben-BuildYourBrand Rechnungen">
+                <small class="form-text text-muted">Gmail-Label für automatische Rechnungserfassung (optional)</small>
+            </div>
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="aktiv" name="aktiv" {% if not lieferant or lieferant.aktiv %}checked{% endif %}>
+                    <label class="form-check-label" for="aktiv">
+                        Aktiv
+                    </label>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> Speichern
+                </button>
+                <a href="{{ url_for('lieferanten') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Abbrechen
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

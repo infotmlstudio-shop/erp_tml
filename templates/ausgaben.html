@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block page_title %}Ausgaben{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Ausgaben {{ jahr }}</h3>
+    <a href="{{ url_for('ausgaben_neu') }}" class="btn btn-danger">
+        <i class="bi bi-plus-circle"></i> Neue Ausgabe
+    </a>
+</div>
+
+{% if ausgaben_dict %}
+    {% for lieferant, buchungen in ausgaben_dict.items() %}
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                {% if lieferant %}
+                    {{ lieferant.name }} Rechnungen
+                {% else %}
+                    Sonstige Ausgaben
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Betrag</th>
+                            <th>Titel</th>
+                            <th>Rechnungsnummer</th>
+                            <th>Quelle</th>
+                            <th>PDF</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for buchung in buchungen %}
+                        <tr>
+                            <td>{{ buchung.datum.strftime('%d.%m.%Y') }}</td>
+                            <td class="text-danger fw-bold">{{ "%.2f"|format(buchung.betrag) }} €</td>
+                            <td>{{ buchung.titel or '-' }}</td>
+                            <td>{{ buchung.rechnungsnummer or '-' }}</td>
+                            <td>
+                                {% if buchung.quelle == 'Gmail' %}
+                                    <span class="badge bg-info">Gmail</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Manuell</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if buchung.pdf_pfad %}
+                                    <a href="{{ url_for('rechnungen', filename=buchung.pdf_pfad.split('/')[-1]) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-file-pdf"></i>
+                                    </a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="card">
+    <div class="card-body">
+        <p class="text-muted text-center py-4">Keine Ausgaben für {{ jahr }} vorhanden.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

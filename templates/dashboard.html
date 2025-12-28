@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Kennzahlen -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card stat-card einnahmen">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Einnahmen</h5>
+                <h2 class="text-success">{{ "%.2f"|format(einnahmen) }} €</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card stat-card ausgaben">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Ausgaben</h5>
+                <h2 class="text-danger">{{ "%.2f"|format(ausgaben) }} €</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card stat-card gewinn">
+            <div class="card-body">
+                <h5 class="card-title text-muted">Gewinn</h5>
+                <h2 class="{% if gewinn >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ "%.2f"|format(gewinn) }} €
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monatsübersicht -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Monatsübersicht {{ jahr }}</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Monatsübersicht Diagramm
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    const months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    
+    const einnahmenData = [];
+    const ausgabenData = [];
+    
+    {% for month in range(1, 13) %}
+        {% set month_str = "%02d"|format(month) %}
+        einnahmenData.push({{ monats_einnahmen.get(month_str, 0) }});
+        ausgabenData.push({{ monats_ausgaben.get(month_str, 0) }});
+    {% endfor %}
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Einnahmen',
+                data: einnahmenData,
+                backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                borderColor: 'rgba(40, 167, 69, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Ausgaben',
+                data: ausgabenData,
+                backgroundColor: 'rgba(220, 53, 69, 0.6)',
+                borderColor: 'rgba(220, 53, 69, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toFixed(2) + ' €';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' €';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+
