@@ -43,20 +43,42 @@ class GmailService:
         # Pfade absolut machen falls relativ
         if not os.path.isabs(credentials_path):
             # Relativer Pfad - finde Projekt-Root (wo app.py liegt)
-            if hasattr(current_app, 'root_path'):
-                # Flask root_path ist das Verzeichnis wo app.py liegt
-                base_dir = current_app.root_path
-            else:
-                # Fallback: vom aktuellen Modul aus
-                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            credentials_path = os.path.join(base_dir, credentials_path)
+            try:
+                if hasattr(current_app, 'root_path'):
+                    # Flask root_path ist das Verzeichnis wo app.py liegt
+                    base_dir = current_app.root_path
+                else:
+                    # Fallback: vom aktuellen Modul aus
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                credentials_path = os.path.join(base_dir, credentials_path)
+            except:
+                # Wenn current_app nicht verfügbar, verwende absoluten Pfad
+                credentials_path = os.path.join('/opt/erp_tml', credentials_path.lstrip('/'))
         
         if not os.path.isabs(token_path):
-            if hasattr(current_app, 'root_path'):
-                base_dir = current_app.root_path
+            try:
+                if hasattr(current_app, 'root_path'):
+                    base_dir = current_app.root_path
+                else:
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                token_path = os.path.join(base_dir, token_path)
+            except:
+                token_path = os.path.join('/opt/erp_tml', token_path.lstrip('/'))
+        
+        # Fallback: Wenn Datei nicht existiert, versuche absoluten Pfad
+        if not os.path.exists(credentials_path):
+            fallback_credentials = '/opt/erp_tml/credentials/gmail_credentials.json'
+            if os.path.exists(fallback_credentials):
+                credentials_path = fallback_credentials
             else:
-                base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            token_path = os.path.join(base_dir, token_path)
+                print(f"Warnung: Gmail-Credentials nicht gefunden: {credentials_path}")
+                print(f"  Fallback auch nicht gefunden: {fallback_credentials}")
+                return  # Authentifizierung nicht möglich
+        
+        if not os.path.exists(token_path):
+            fallback_token = '/opt/erp_tml/credentials/gmail_token.json'
+            if os.path.exists(fallback_token):
+                token_path = fallback_token
         
         # Token laden falls vorhanden
         if os.path.exists(token_path):
