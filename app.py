@@ -368,6 +368,16 @@ def gmail_sync():
             app.logger.error(f"App root_path: {app.root_path}")
             app.logger.error(f"Working directory: {os.getcwd()}")
             
+            # Prüfe ob credentials-Verzeichnis existiert
+            creds_dir = '/opt/erp_tml/credentials'
+            app.logger.error(f"Credentials-Verzeichnis existiert: {os.path.exists(creds_dir)}")
+            if os.path.exists(creds_dir):
+                try:
+                    files = os.listdir(creds_dir)
+                    app.logger.error(f"Dateien im credentials-Verzeichnis: {files}")
+                except Exception as e:
+                    app.logger.error(f"Fehler beim Lesen des Verzeichnisses: {e}")
+            
             flash('Gmail-Service konnte nicht initialisiert werden. Bitte prüfen Sie die Gmail-Credentials.', 'error')
             return redirect(url_for('index'))
         
