@@ -15,21 +15,42 @@ class PDFService:
                 for page in pdf.pages:
                     full_text += page.extract_text() or ""
                 
-                if not full_text:
+                if not full_text or len(full_text.strip()) < 10:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"PDF enthält keinen oder zu wenig Text: {pdf_path}")
                     return None
                 
                 # Daten extrahieren
+                betrag = self._extract_amount(full_text)
+                datum = self._extract_date(full_text)
+                rechnungsnummer = self._extract_invoice_number(full_text)
+                titel = self._extract_title(full_text, pdf_path)
+                
                 data = {
-                    'betrag': self._extract_amount(full_text),
-                    'datum': self._extract_date(full_text),
-                    'rechnungsnummer': self._extract_invoice_number(full_text),
-                    'titel': self._extract_title(full_text, pdf_path)
+                    'betrag': betrag,
+                    'datum': datum,
+                    'rechnungsnummer': rechnungsnummer,
+                    'titel': titel
                 }
+                
+                # Logging für Debugging
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"PDF-Analyse: Betrag={betrag}, Datum={datum}, Rechnungsnummer={rechnungsnummer}, Titel={titel}")
+                
+                # Wenn kein Betrag gefunden, zeige ersten 500 Zeichen des Textes für Debugging
+                if not betrag:
+                    logger.warning(f"PDF-Analyse: Kein Betrag gefunden. Erste 500 Zeichen: {full_text[:500]}")
                 
                 return data if data['betrag'] else None
                 
         except Exception as e:
-            print(f"Fehler bei PDF-Verarbeitung: {e}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Fehler bei PDF-Verarbeitung: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return None
     
     def _extract_amount(self, text):
@@ -45,6 +66,9 @@ class PDFService:
             r'([\d.,]+)\s*EUR',
             r'([\d.,]+)\s*€',
             r'€\s*([\d.,]+)',
+            # Weitere Muster für verschiedene Formate
+            r'(?:Amount|Total|Sum|Price)[\s:]*([\d.,]+)',
+            r'([\d.,]+)\s*(?:EUR|€|Euro)',
         ]
         
         # Suche nach größtem Betrag (wahrscheinlich Gesamtbetrag)
