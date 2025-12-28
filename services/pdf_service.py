@@ -176,24 +176,38 @@ class PDFService:
             # Belegnummer direkt gefolgt von Zahl
             r'Belegnummer\s+(\d+)',
             # Rechnungsnummer Format: "Rechnungsnummer" gefolgt von Nummer (nicht das Wort selbst!)
-            r'Rechnungsnummer\s*[:]?\s*([A-Z0-9\-/]+)',
-            r'Rechnungsnummer\s+([A-Z0-9\-/]+)',
-            # Spezielles Format: INVOICE-4937130
+            # Wichtig: Muss mit Zahl oder Buchstabe-Zahl-Kombination beginnen, nicht mit "Rechnungsdatum"
+            # Pattern: "Rechnungsnummer" gefolgt von Leerzeichen/Doppelpunkt, dann Nummer (nicht "Rechnungsdatum"!)
+            # Format für Ralateam: "Rechnungsnummer Rechnungsdatum Zahlungsziel" - Rechnungsnummer steht in der nächsten Zeile
+            r'Rechnungsnummer\s+Rechnungsdatum\s+Zahlungsziel\s*\n\s*(\d+)',  # Format: Rechnungsnummer Rechnungsdatum Zahlungsziel\n999901690
+            r'Rechnungsnummer\s*[:]?\s+([A-Z0-9][A-Z0-9\-/]*)',  # Mindestens ein Leerzeichen nach "Rechnungsnummer"
+            r'Rechnungsnummer\s*:\s*([A-Z0-9][A-Z0-9\-/]*)',  # Mit Doppelpunkt
+            # Format für Ralateam: "Rechnungsnummer OP/I051733" oder "999901690"
+            r'Rechnungsnummer\s+([A-Z0-9][A-Z0-9\-/]+)',  # Mindestens 2 Zeichen
+            # Spezielles Format: INVOICE-4937130 oder OP/I051733
             r'INVOICE[-/](\d+)',
+            r'OP[/]?([A-Z0-9\-/]+)',  # Format: OP/I051733
             # Standard-Muster (nur wenn nicht "Rechnungsnummer" selbst)
-            r'(?:Invoice|Nr\.?|No\.?)[\s:]*([A-Z0-9\-/]+)',
-            r'#\s*([A-Z0-9\-/]+)',
-            r'INV[-/]?([A-Z0-9\-/]+)',
+            r'(?:Invoice|Nr\.?|No\.?)[\s:]*([A-Z0-9][A-Z0-9\-/]*)',
+            r'#\s*([A-Z0-9][A-Z0-9\-/]*)',
+            r'INV[-/]?([A-Z0-9][A-Z0-9\-/]*)',
         ]
         
         for pattern in patterns:
             matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
             if matches:
                 result = matches[0].strip()
-                # Prüfen ob es nicht nur "Belegnummer", "Rechnungsnummer" oder ähnliches ist
-                invalid = ['belegnummer', 'rechnung', 'rechnungsnummer', 'invoice', 'nr', 'no', 'template', 'debitoren', 'xml', 'nummer']
+                # Prüfen ob es nicht nur "Belegnummer", "Rechnungsnummer", "Rechnungsdatum" oder ähnliches ist
+                invalid = ['belegnummer', 'rechnung', 'rechnungsnummer', 'rechnungsdatum', 'zahlungsziel', 'datum', 'invoice', 'nr', 'no', 'template', 'debitoren', 'xml', 'nummer', 'seite']
                 if result.lower() not in invalid and len(result) > 2:
-                    return result
+                    # Prüfe auch, ob es nicht mit "rechnungs" beginnt
+                    if not result.lower().startswith('rechnungs'):
+                        # Prüfe ob es eine Zahl enthält (Rechnungsnummern enthalten meist Zahlen)
+                        if any(char.isdigit() for char in result):
+                            return result
+                        # Oder wenn es ein Format wie "OP/I051733" ist
+                        if '/' in result and any(char.isdigit() for char in result):
+                            return result
         
         return None
     
