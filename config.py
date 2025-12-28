@@ -11,8 +11,10 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Gmail API
-    GMAIL_CREDENTIALS_PATH = os.environ.get('GMAIL_CREDENTIALS_PATH') or 'credentials/gmail_credentials.json'
-    GMAIL_TOKEN_PATH = os.environ.get('GMAIL_TOKEN_PATH') or 'credentials/gmail_token.json'
+    # Verwende absolute Pfade für bessere Kompatibilität
+    _base_dir = os.path.dirname(os.path.abspath(__file__))
+    GMAIL_CREDENTIALS_PATH = os.environ.get('GMAIL_CREDENTIALS_PATH') or os.path.join(_base_dir, 'credentials', 'gmail_credentials.json')
+    GMAIL_TOKEN_PATH = os.environ.get('GMAIL_TOKEN_PATH') or os.path.join(_base_dir, 'credentials', 'gmail_token.json')
     
     # File uploads
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'rechnungen')
