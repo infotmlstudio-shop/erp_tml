@@ -759,24 +759,24 @@ def benutzer_bearbeiten(id):
             return redirect(url_for('benutzer'))
         
         if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        rolle_id = request.form.get('rolle_id', type=int)
-        aktiv = request.form.get('aktiv') == 'on'
-        
-        # Prüfen ob Username bereits existiert (außer aktuellem Benutzer)
-        existing = User.query.filter_by(username=username).first()
-        if existing and existing.id != id:
-            flash('Ein Benutzer mit diesem Namen existiert bereits.', 'error')
-            return redirect(url_for('benutzer_bearbeiten', id=id))
-        
-        user.username = username
-        if password:
-            user.set_password(password)
-        user.rolle_id = rolle_id if rolle_id else None
-        user.aktiv = aktiv
-        db.session.commit()
-        
+            username = request.form.get('username')
+            password = request.form.get('password')
+            rolle_id = request.form.get('rolle_id', type=int)
+            aktiv = request.form.get('aktiv') == 'on'
+            
+            # Prüfen ob Username bereits existiert (außer aktuellem Benutzer)
+            existing = User.query.filter_by(username=username).first()
+            if existing and existing.id != id:
+                flash('Ein Benutzer mit diesem Namen existiert bereits.', 'error')
+                return redirect(url_for('benutzer_bearbeiten', id=id))
+            
+            user.username = username
+            if password:
+                user.set_password(password)
+            user.rolle_id = rolle_id if rolle_id else None
+            user.aktiv = aktiv
+            db.session.commit()
+            
             flash('Benutzer erfolgreich aktualisiert.', 'success')
             return redirect(url_for('benutzer'))
         
@@ -890,26 +890,26 @@ def rollen_bearbeiten(id):
         rolle = Rolle.query.get_or_404(id)
         
         if request.method == 'POST':
-        name = request.form.get('name')
-        beschreibung = request.form.get('beschreibung', '')
-        
-        # Berechtigungen sammeln
-        import json
-        berechtigungen = {}
-        for bereich in ['dashboard', 'einnahmen', 'ausgaben', 'lieferanten', 'lager', 'benutzer']:
-            berechtigungen[bereich] = request.form.get(f'berechtigung_{bereich}') == 'on'
-        
-        # Prüfen ob Name bereits existiert (außer aktueller Rolle)
-        existing = Rolle.query.filter_by(name=name).first()
-        if existing and existing.id != id:
-            flash('Eine Rolle mit diesem Namen existiert bereits.', 'error')
-            return redirect(url_for('rollen_bearbeiten', id=id))
-        
-        rolle.name = name
-        rolle.beschreibung = beschreibung
-        rolle.berechtigungen = json.dumps(berechtigungen)
-        db.session.commit()
-        
+            name = request.form.get('name')
+            beschreibung = request.form.get('beschreibung', '')
+            
+            # Berechtigungen sammeln
+            import json
+            berechtigungen = {}
+            for bereich in ['dashboard', 'einnahmen', 'ausgaben', 'lieferanten', 'lager', 'benutzer']:
+                berechtigungen[bereich] = request.form.get(f'berechtigung_{bereich}') == 'on'
+            
+            # Prüfen ob Name bereits existiert (außer aktueller Rolle)
+            existing = Rolle.query.filter_by(name=name).first()
+            if existing and existing.id != id:
+                flash('Eine Rolle mit diesem Namen existiert bereits.', 'error')
+                return redirect(url_for('rollen_bearbeiten', id=id))
+            
+            rolle.name = name
+            rolle.beschreibung = beschreibung
+            rolle.berechtigungen = json.dumps(berechtigungen)
+            db.session.commit()
+            
             flash('Rolle erfolgreich aktualisiert.', 'success')
             return redirect(url_for('rollen'))
         
