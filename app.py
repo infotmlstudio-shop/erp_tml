@@ -753,7 +753,14 @@ def benutzer_neu():
         return redirect(url_for('benutzer'))
     
     rollen = Rolle.query.order_by(Rolle.name).all()
-    return render_template('benutzer_form.html', rollen=rollen)
+    # Leeres user_data für neuen Benutzer
+    user_data = {
+        'id': None,
+        'username': '',
+        'rolle_id': None,
+        'aktiv': True
+    }
+    return render_template('benutzer_form.html', user=None, user_data=user_data, rollen=rollen)
 
 @app.route('/einstellungen/benutzer/<int:id>/bearbeiten', methods=['GET', 'POST'])
 @login_required
@@ -800,12 +807,21 @@ def benutzer_bearbeiten(id):
             app.logger.error(f"Fehler beim Laden der Rollen: {e}")
             rollen = []
         
-        return render_template('benutzer_form.html', user=user, rollen=rollen)
+        # User-Daten für Template vorbereiten (falls Felder fehlen)
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'rolle_id': getattr(user, 'rolle_id', None),
+            'aktiv': getattr(user, 'aktiv', True)
+        }
+        
+        return render_template('benutzer_form.html', user=user, user_data=user_data, rollen=rollen)
     except Exception as e:
         app.logger.error(f"Fehler in benutzer_bearbeiten(): {e}")
         import traceback
         app.logger.error(traceback.format_exc())
         flash(f'Fehler beim Laden der Benutzerdaten: {str(e)}', 'error')
+        # Zurück zur Benutzer-Übersicht, nicht zu benutzer_bearbeiten (id könnte fehlen)
         return redirect(url_for('benutzer'))
 
 @app.route('/einstellungen/benutzer/<int:id>/loeschen', methods=['POST'])
