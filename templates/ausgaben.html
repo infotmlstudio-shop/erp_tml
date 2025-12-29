@@ -50,8 +50,8 @@
                             <td class="text-danger fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
                             <td style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
                             <td style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
-                            <td style="text-align: center; vertical-align: middle;">
-                                <div class="form-check d-flex justify-content-center">
+                            <td class="text-center align-middle">
+                                <div class="d-flex justify-content-center align-items-center" style="min-height: 2em;">
                                     <input type="checkbox" 
                                            class="form-check-input zielkonto-checkbox" 
                                            id="zielkonto-{{ buchung.id }}"
@@ -119,10 +119,8 @@
         box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     }
     
-    .form-check {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .zielkonto-checkbox {
+        flex-shrink: 0;
     }
 </style>
 {% endblock %}
