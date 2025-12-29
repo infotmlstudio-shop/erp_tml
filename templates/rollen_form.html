@@ -32,7 +32,7 @@
                         ] %}
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" id="berechtigung_{{ bereich[0] }}" name="berechtigung_{{ bereich[0] }}" 
-                                   {% if not rolle or berechtigungen.get(bereich[0]) %}checked{% endif %}>
+                                   {% if rolle and berechtigungen and berechtigungen.get(bereich[0]) %}checked{% elif not rolle %}checked{% endif %}>
                             <label class="form-check-label" for="berechtigung_{{ bereich[0] }}">
                                 <strong>{{ bereich[1] }}</strong> - {{ bereich[2] }}
                             </label>

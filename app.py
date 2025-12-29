@@ -746,18 +746,19 @@ def benutzer_neu():
 @login_required
 def benutzer_bearbeiten(id):
     """Benutzer bearbeiten"""
-    if not current_user.hat_berechtigung('benutzer'):
-        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
-        return redirect(url_for('index'))
-    
-    user = User.query.get_or_404(id)
-    
-    # Admin kann nicht bearbeitet werden (außer Passwort)
-    if user.username == 'admin' and current_user.username != 'admin':
-        flash('Der Admin-Benutzer kann nicht bearbeitet werden.', 'error')
-        return redirect(url_for('benutzer'))
-    
-    if request.method == 'POST':
+    try:
+        if not current_user.hat_berechtigung('benutzer'):
+            flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+            return redirect(url_for('index'))
+        
+        user = User.query.get_or_404(id)
+        
+        # Admin kann nicht bearbeitet werden (außer Passwort)
+        if user.username == 'admin' and current_user.username != 'admin':
+            flash('Der Admin-Benutzer kann nicht bearbeitet werden.', 'error')
+            return redirect(url_for('benutzer'))
+        
+        if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         rolle_id = request.form.get('rolle_id', type=int)
@@ -776,11 +777,22 @@ def benutzer_bearbeiten(id):
         user.aktiv = aktiv
         db.session.commit()
         
-        flash('Benutzer erfolgreich aktualisiert.', 'success')
+            flash('Benutzer erfolgreich aktualisiert.', 'success')
+            return redirect(url_for('benutzer'))
+        
+        try:
+            rollen = Rolle.query.order_by(Rolle.name).all()
+        except Exception as e:
+            app.logger.error(f"Fehler beim Laden der Rollen: {e}")
+            rollen = []
+        
+        return render_template('benutzer_form.html', user=user, rollen=rollen)
+    except Exception as e:
+        app.logger.error(f"Fehler in benutzer_bearbeiten(): {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
+        flash(f'Fehler beim Laden der Benutzerdaten: {str(e)}', 'error')
         return redirect(url_for('benutzer'))
-    
-    rollen = Rolle.query.order_by(Rolle.name).all()
-    return render_template('benutzer_form.html', user=user, rollen=rollen)
 
 @app.route('/einstellungen/benutzer/<int:id>/loeschen', methods=['POST'])
 @login_required
@@ -870,13 +882,14 @@ def rollen_neu():
 @login_required
 def rollen_bearbeiten(id):
     """Rolle bearbeiten"""
-    if not current_user.hat_berechtigung('benutzer'):
-        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
-        return redirect(url_for('index'))
-    
-    rolle = Rolle.query.get_or_404(id)
-    
-    if request.method == 'POST':
+    try:
+        if not current_user.hat_berechtigung('benutzer'):
+            flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+            return redirect(url_for('index'))
+        
+        rolle = Rolle.query.get_or_404(id)
+        
+        if request.method == 'POST':
         name = request.form.get('name')
         beschreibung = request.form.get('beschreibung', '')
         
@@ -897,17 +910,24 @@ def rollen_bearbeiten(id):
         rolle.berechtigungen = json.dumps(berechtigungen)
         db.session.commit()
         
-        flash('Rolle erfolgreich aktualisiert.', 'success')
+            flash('Rolle erfolgreich aktualisiert.', 'success')
+            return redirect(url_for('rollen'))
+        
+        # Berechtigungen für Template vorbereiten
+        import json
+        try:
+            berechtigungen = json.loads(rolle.berechtigungen) if rolle.berechtigungen else {}
+        except Exception as e:
+            app.logger.error(f"Fehler beim Parsen der Berechtigungen: {e}")
+            berechtigungen = {}
+        
+        return render_template('rollen_form.html', rolle=rolle, berechtigungen=berechtigungen)
+    except Exception as e:
+        app.logger.error(f"Fehler in rollen_bearbeiten(): {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
+        flash(f'Fehler beim Laden der Rollendaten: {str(e)}', 'error')
         return redirect(url_for('rollen'))
-    
-    # Berechtigungen für Template vorbereiten
-    import json
-    try:
-        berechtigungen = json.loads(rolle.berechtigungen)
-    except:
-        berechtigungen = {}
-    
-    return render_template('rollen_form.html', rolle=rolle, berechtigungen=berechtigungen)
 
 @app.route('/einstellungen/rollen/<int:id>/loeschen', methods=['POST'])
 @login_required
