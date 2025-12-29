@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Lieferant, Buchung, Lager, Artikel
+from models import db, User, Lieferant, Buchung, Lager, Artikel, Rolle
 from config import Config
 from datetime import datetime, date
 from decimal import Decimal
+from functools import wraps
 import os
 from werkzeug.utils import secure_filename
 
@@ -32,6 +33,9 @@ def load_user(user_id):
 @login_required
 def index():
     """Dashboard mit Jahresfilter"""
+    if not current_user.hat_berechtigung('dashboard'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('login'))
     jahr = request.args.get('jahr', type=int)
     if not jahr:
         jahr = datetime.now().year
@@ -189,6 +193,10 @@ def einnahmen_neu():
 @app.route('/ausgaben')
 @login_required
 def ausgaben():
+    """Ausgaben-Übersicht"""
+    if not current_user.hat_berechtigung('ausgaben'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
     """Ausgaben-Übersicht nach Lieferanten gruppiert"""
     jahr = request.args.get('jahr', type=int)
     if not jahr:
@@ -335,6 +343,10 @@ def ausgaben_neu():
 @app.route('/einstellungen/lieferanten')
 @login_required
 def lieferanten():
+    """Lieferanten-Übersicht"""
+    if not current_user.hat_berechtigung('lieferanten'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
     """Lieferanten-Verwaltung"""
     lieferanten = Lieferant.query.order_by(Lieferant.typ, Lieferant.name).all()
     return render_template('lieferanten.html', lieferanten=lieferanten)
@@ -405,6 +417,10 @@ def lieferanten_loeschen(id):
 @app.route('/lager')
 @login_required
 def lager():
+    """Lager-Übersicht"""
+    if not current_user.hat_berechtigung('lager'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
     """Lager-Übersicht"""
     lager_id = request.args.get('lager_id', type=int)
     lager_liste = Lager.query.filter_by(aktiv=True).order_by(Lager.name).all()

@@ -5,12 +5,43 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+class Rolle(db.Model):
+    """Rollen-Modell"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    beschreibung = db.Column(db.String(200), nullable=True)
+    
+    # Berechtigungen (als JSON-String gespeichert)
+    berechtigungen = db.Column(db.Text, nullable=False, default='{}')  # JSON: {"dashboard": True, "einnahmen": True, ...}
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Beziehung zu Benutzern
+    benutzer = db.relationship('User', backref='rolle', lazy=True)
+    
+    def __repr__(self):
+        return f'<Rolle {self.name}>'
+    
+    def hat_berechtigung(self, bereich):
+        """Prüft ob Rolle Berechtigung für einen Bereich hat"""
+        import json
+        try:
+            perms = json.loads(self.berechtigungen)
+            return perms.get(bereich, False)
+        except:
+            return False
+
+
 class User(UserMixin, db.Model):
     """Benutzer-Modell"""
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    rolle_id = db.Column(db.Integer, db.ForeignKey('rolle.id'), nullable=True)
+    aktiv = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def set_password(self, password):
         """Passwort hashen"""
@@ -19,6 +50,15 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         """Passwort überprüfen"""
         return check_password_hash(self.password_hash, password)
+    
+    def hat_berechtigung(self, bereich):
+        """Prüft ob Benutzer Berechtigung für einen Bereich hat"""
+        # Admin hat immer alle Berechtigungen
+        if self.username == 'admin':
+            return True
+        if not self.rolle or not self.aktiv:
+            return False
+        return self.rolle.hat_berechtigung(bereich)
     
     def __repr__(self):
         return f'<User {self.username}>'

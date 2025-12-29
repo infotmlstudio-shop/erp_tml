@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block page_title %}{% if user %}Benutzer bearbeiten{% else %}Neuer Benutzer{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{% if user %}Benutzer bearbeiten{% else %}Neuer Benutzer{% endif %}</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="username" class="form-label">Benutzername *</label>
+                <input type="text" class="form-control" id="username" name="username" value="{{ user.username if user else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Passwort {% if user %}(leer lassen zum Beibehalten){% else %}*{% endif %}</label>
+                <input type="password" class="form-control" id="password" name="password" {% if not user %}required{% endif %}>
+                {% if user %}
+                <small class="form-text text-muted">Nur ausfüllen, wenn das Passwort geändert werden soll.</small>
+                {% endif %}
+            </div>
+            <div class="mb-3">
+                <label for="rolle_id" class="form-label">Rolle</label>
+                <select class="form-select" id="rolle_id" name="rolle_id">
+                    <option value="">Keine Rolle</option>
+                    {% for rolle in rollen %}
+                    <option value="{{ rolle.id }}" {% if user and user.rolle_id == rolle.id %}selected{% endif %}>
+                        {{ rolle.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="aktiv" name="aktiv" {% if not user or user.aktiv %}checked{% endif %}>
+                    <label class="form-check-label" for="aktiv">
+                        Aktiv
+                    </label>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Speichern
+                </button>
+                <a href="{{ url_for('benutzer') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Abbrechen
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

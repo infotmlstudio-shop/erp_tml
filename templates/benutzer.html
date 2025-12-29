@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block page_title %}Benutzerverwaltung{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Benutzer</h3>
+    <a href="{{ url_for('benutzer_neu') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Neuer Benutzer
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if benutzer_liste %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Benutzername</th>
+                        <th>Rolle</th>
+                        <th>Status</th>
+                        <th>Erstellt am</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in benutzer_liste %}
+                    <tr>
+                        <td>
+                            <strong>{{ user.username }}</strong>
+                            {% if user.username == 'admin' %}
+                                <span class="badge bg-warning text-dark ms-2">Admin</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.rolle %}
+                                <span class="badge bg-info">{{ user.rolle.name }}</span>
+                            {% else %}
+                                <span class="text-muted">Keine Rolle</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.aktiv %}
+                                <span class="badge bg-success">Aktiv</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inaktiv</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.created_at.strftime('%d.%m.%Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('benutzer_bearbeiten', id=user.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Bearbeiten
+                            </a>
+                            {% if user.username != 'admin' and user.id != current_user.id %}
+                            <form method="POST" action="{{ url_for('benutzer_loeschen', id=user.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diesen Benutzer wirklich löschen?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Löschen
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4">Keine Benutzer vorhanden.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+    <h3>Rollen</h3>
+    <a href="{{ url_for('rollen_neu') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Neue Rolle
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if rollen %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Beschreibung</th>
+                        <th>Berechtigungen</th>
+                        <th>Benutzer</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rolle in rollen %}
+                    <tr>
+                        <td><strong>{{ rolle.name }}</strong></td>
+                        <td>{{ rolle.beschreibung or '-' }}</td>
+                        <td>
+                            {% for rolle_obj, perms in rollen_mit_berechtigungen %}
+                                {% if rolle_obj.id == rolle.id %}
+                                    {% for bereich in ['dashboard', 'einnahmen', 'ausgaben', 'lieferanten', 'lager', 'benutzer'] %}
+                                        {% if perms.get(bereich) %}
+                                            <span class="badge bg-success me-1">{{ bereich }}</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% set count = 0 %}
+                            {% for user in benutzer_liste %}
+                                {% if user.rolle_id == rolle.id %}
+                                    {% set count = count + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ count }} Benutzer
+                        </td>
+                        <td>
+                            <a href="{{ url_for('rollen_bearbeiten', id=rolle.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Bearbeiten
+                            </a>
+                            {% if User.query.filter_by(rolle_id=rolle.id).count() == 0 %}
+                            <form method="POST" action="{{ url_for('rollen_loeschen', id=rolle.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diese Rolle wirklich löschen?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Löschen
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4">Keine Rollen vorhanden.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter für JSON-Parsing (falls nicht vorhanden)
+</script>
+{% endblock %}
+
