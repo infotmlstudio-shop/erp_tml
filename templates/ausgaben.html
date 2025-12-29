@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h3 class="mb-0">Ausgaben {{ jahr }}</h3>
+    <h3 class="mb-0 flex-grow-1">Ausgaben {{ jahr }}</h3>
     <a href="{{ url_for('ausgaben_neu') }}" class="btn btn-danger">
         <i class="bi bi-plus-circle"></i> <span class="d-none d-md-inline">Neue Ausgabe</span><span class="d-md-none">Neu</span>
     </a>
@@ -14,22 +14,26 @@
     {% for lieferant, buchungen in ausgaben_dict.items() %}
     {% set anzahl = buchungen|length %}
     {% set gesamtbetrag = ausgaben_summens.get(lieferant, 0.0) %}
-    <div class="card mb-4">
-        <div class="card-header bg-light">
+    <div class="card mb-3">
+        <div class="card-header bg-light p-2 p-md-3">
             <h5 class="mb-0">
-                <button class="btn btn-link text-decoration-none text-dark p-0 w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ lieferant.id if lieferant else 'sonstige' }}" aria-expanded="true" aria-controls="collapse-{{ lieferant.id if lieferant else 'sonstige' }}">
-                    <i class="bi bi-chevron-down"></i>
-                    {% if lieferant %}
-                        {{ lieferant.name }} Rechnungen ({{ anzahl }})
-                    {% else %}
-                        Sonstige Ausgaben ({{ anzahl }})
-                    {% endif %}
-                    <span class="text-muted ms-2">Gesamt = {{ "%.2f"|format(gesamtbetrag) }} €</span>
+                <button class="btn btn-link text-decoration-none text-dark p-0 w-100 text-start d-flex align-items-center justify-content-between flex-wrap" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ lieferant.id if lieferant else 'sonstige' }}" aria-expanded="true" aria-controls="collapse-{{ lieferant.id if lieferant else 'sonstige' }}">
+                    <span class="d-flex align-items-center">
+                        <i class="bi bi-chevron-down me-2"></i>
+                        <span>
+                            {% if lieferant %}
+                                {{ lieferant.name }} Rechnungen ({{ anzahl }})
+                            {% else %}
+                                Sonstige Ausgaben ({{ anzahl }})
+                            {% endif %}
+                        </span>
+                    </span>
+                    <span class="text-muted ms-2 small">Gesamt = {{ "%.2f"|format(gesamtbetrag) }} €</span>
                 </button>
             </h5>
         </div>
         <div id="collapse-{{ lieferant.id if lieferant else 'sonstige' }}" class="collapse show" aria-labelledby="heading-{{ lieferant.id if lieferant else 'sonstige' }}">
-        <div class="card-body">
+        <div class="card-body p-2 p-md-3">
             <div class="table-responsive">
                 <table class="table table-hover ausgaben-table">
                     <thead>

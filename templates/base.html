@@ -16,10 +16,39 @@
         }
         @media (max-width: 768px) {
             .main-content {
-                padding: 15px;
+                padding: 10px;
             }
             .sidebar {
                 min-height: auto;
+                width: 280px;
+                padding: 15px;
+            }
+            .sidebar h4 {
+                font-size: 1.1rem;
+            }
+            .sidebar .nav-link {
+                padding: 0.5rem 0.75rem;
+                font-size: 0.95rem;
+            }
+            h2 {
+                font-size: 1.5rem;
+            }
+            h3 {
+                font-size: 1.25rem;
+            }
+            .card {
+                margin-bottom: 1rem;
+            }
+            .card-body {
+                padding: 1rem;
+            }
+            .btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+            .btn-sm {
+                padding: 0.35rem 0.65rem;
+                font-size: 0.85rem;
             }
         }
         .stat-card {
@@ -50,8 +79,11 @@
         /* Mobile: Tabellen als Cards */
         @media (max-width: 768px) {
             .table-responsive {
-                overflow-x: auto;
+                overflow-x: visible;
                 -webkit-overflow-scrolling: touch;
+            }
+            .table {
+                margin-bottom: 0;
             }
             .table thead {
                 display: none;
@@ -60,24 +92,47 @@
                 display: block;
                 margin-bottom: 1rem;
                 border: 1px solid #dee2e6;
-                border-radius: 0.375rem;
-                padding: 0.75rem;
+                border-radius: 0.5rem;
+                padding: 1rem;
+                background-color: #fff;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             }
             .table tbody td {
-                display: block;
-                text-align: right;
-                padding: 0.5rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.75rem 0.5rem;
                 border: none;
-                border-bottom: 1px solid #dee2e6;
+                border-bottom: 1px solid #f0f0f0;
+                text-align: left;
             }
             .table tbody td:before {
                 content: attr(data-label);
-                float: left;
-                font-weight: bold;
-                color: #6c757d;
+                font-weight: 600;
+                color: #495057;
+                margin-right: 1rem;
+                flex-shrink: 0;
+                min-width: 120px;
             }
             .table tbody td:last-child {
                 border-bottom: none;
+            }
+            .table tbody td .btn {
+                margin: 0.25rem;
+            }
+            .table tbody td .d-flex {
+                flex-wrap: wrap;
+            }
+            /* Spezielle Anpassungen für bestimmte Spalten */
+            .table tbody td[data-label="Aktionen"] {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .table tbody td[data-label="Aktionen"]:before {
+                margin-bottom: 0.5rem;
+            }
+            .table tbody td[data-label="Aktionen"] .d-flex {
+                justify-content: flex-start;
             }
         }
         /* Collapse Icon Animation */
@@ -94,6 +149,8 @@
         @media (max-width: 768px) {
             .mobile-menu-btn {
                 display: block;
+                padding: 0.5rem;
+                margin-right: 0.5rem;
             }
             .sidebar {
                 position: fixed;
@@ -102,8 +159,10 @@
                 width: 280px;
                 height: 100vh;
                 z-index: 1050;
-                transition: left 0.3s;
+                transition: left 0.3s ease;
                 overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
             }
             .sidebar.show {
                 left: 0;
@@ -117,12 +176,79 @@
                 height: 100%;
                 background-color: rgba(0, 0, 0, 0.5);
                 z-index: 1040;
+                transition: opacity 0.3s;
             }
             .sidebar-overlay.show {
                 display: block;
             }
             .main-content {
                 margin-left: 0;
+                width: 100%;
+            }
+            /* Header optimieren */
+            .d-flex.justify-content-between {
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+            .d-flex.align-items-center.gap-2,
+            .d-flex.align-items-center.gap-3 {
+                gap: 0.5rem !important;
+            }
+            /* Form Selects kleiner */
+            .form-select {
+                font-size: 0.9rem;
+                padding: 0.4rem 0.75rem;
+            }
+            /* Labels kleiner */
+            .form-label {
+                font-size: 0.9rem;
+                margin-bottom: 0.25rem;
+            }
+            /* Form Inputs */
+            .form-control {
+                font-size: 1rem; /* Verhindert Zoom auf iOS */
+                padding: 0.5rem 0.75rem;
+            }
+            /* Cards kompakter */
+            .card-header {
+                padding: 0.75rem 1rem;
+            }
+            /* Badges kleiner */
+            .badge {
+                font-size: 0.75rem;
+                padding: 0.35em 0.65em;
+            }
+            /* Buttons in Tabellen */
+            .table .btn-sm {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.8rem;
+            }
+        }
+        
+        /* iPhone spezifische Optimierungen */
+        @media (max-width: 428px) {
+            .main-content {
+                padding: 8px;
+            }
+            h2 {
+                font-size: 1.35rem;
+            }
+            h3 {
+                font-size: 1.15rem;
+            }
+            .card-body {
+                padding: 0.75rem;
+            }
+            .table tbody tr {
+                padding: 0.75rem;
+            }
+            .table tbody td {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.9rem;
+            }
+            .table tbody td:before {
+                font-size: 0.85rem;
+                min-width: 100px;
             }
         }
     </style>
@@ -189,12 +315,12 @@
             <!-- Main Content -->
             <main class="col-md-10 main-content">
                 <!-- Header mit Mobile Menu Button -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div class="d-flex align-items-center gap-2">
+                <div class="d-flex justify-content-between align-items-start mb-3 mb-md-4 flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1">
                         <button class="btn btn-outline-secondary mobile-menu-btn" onclick="toggleSidebar()" aria-label="Menü öffnen">
                             <i class="bi bi-list"></i>
                         </button>
-                        <h2 class="mb-0">{% block page_title %}Dashboard{% endblock %}</h2>
+                        <h2 class="mb-0 flex-grow-1">{% block page_title %}Dashboard{% endblock %}</h2>
                     </div>
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         {% if 'lager' in request.endpoint or 'artikel' in request.endpoint %}
