@@ -54,6 +54,7 @@ class Buchung(db.Model):
     quelle = db.Column(db.String(20), nullable=False, default='Manuell')  # 'Gmail' oder 'Manuell'
     gmail_message_id = db.Column(db.String(200), nullable=True)  # Zur Vermeidung von Duplikaten
     von_zielkonto_abgebucht = db.Column(db.Boolean, default=False, nullable=False)
+    ueberwiesen_am = db.Column(db.Date, nullable=True)  # Datum der Überweisung (nur für Einnahmen)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

@@ -149,6 +149,11 @@ def einnahmen_neu():
         datum = datetime.strptime(request.form.get('datum'), '%Y-%m-%d').date()
         rechnungsnummer = request.form.get('rechnungsnummer', '')
         titel = request.form.get('titel', '')
+        ueberwiesen_am = request.form.get('ueberwiesen_am')
+        if ueberwiesen_am:
+            ueberwiesen_am = datetime.strptime(ueberwiesen_am, '%Y-%m-%d').date()
+        else:
+            ueberwiesen_am = None
         
         # PDF-Upload
         pdf_pfad = None
@@ -169,7 +174,8 @@ def einnahmen_neu():
             titel=titel,
             pdf_pfad=pdf_pfad,
             jahr=datum.year,
-            quelle='Manuell'
+            quelle='Manuell',
+            ueberwiesen_am=ueberwiesen_am
         )
         
         db.session.add(buchung)
@@ -239,6 +245,29 @@ def ausgaben_zielkonto(buchung_id):
         
         buchung = Buchung.query.get_or_404(buchung_id)
         buchung.von_zielkonto_abgebucht = abgebucht
+        db.session.commit()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/einnahmen/ueberwiesen/<int:buchung_id>', methods=['POST'])
+@login_required
+def einnahmen_ueberwiesen(buchung_id):
+    """Datum 'Überwiesen am' aktualisieren"""
+    try:
+        data = request.get_json()
+        ueberwiesen_am_str = data.get('ueberwiesen_am')
+        
+        buchung = Buchung.query.get_or_404(buchung_id)
+        
+        if ueberwiesen_am_str:
+            ueberwiesen_am = datetime.strptime(ueberwiesen_am_str, '%Y-%m-%d').date()
+        else:
+            ueberwiesen_am = None
+        
+        buchung.ueberwiesen_am = ueberwiesen_am
         db.session.commit()
         
         return jsonify({'success': True})

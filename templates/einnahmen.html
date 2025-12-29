@@ -17,10 +17,11 @@
                 <table class="table table-hover einnahmen-table">
                     <thead>
                         <tr>
-                            <th style="width: 12%;">Datum</th>
-                            <th style="width: 12%;">Betrag</th>
-                            <th style="width: 25%;">Titel</th>
-                            <th style="width: 20%;">Rechnungsnummer</th>
+                            <th style="width: 10%;">Datum</th>
+                            <th style="width: 10%;">Betrag</th>
+                            <th style="width: 20%;">Titel</th>
+                            <th style="width: 15%;">Rechnungsnummer</th>
+                            <th style="width: 15%;" class="text-center">Überwiesen am</th>
                             <th style="width: 10%;">Quelle</th>
                             <th style="width: 8%;">PDF</th>
                         </tr>
@@ -32,6 +33,15 @@
                         <td class="text-success fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
                         <td style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
                         <td style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
+                        <td class="text-center align-middle ueberwiesen-am-cell" 
+                            data-buchung-id="{{ buchung.id }}"
+                            style="vertical-align: middle;">
+                            <input type="date" 
+                                   class="form-control form-control-sm ueberwiesen-am-input {% if buchung.ueberwiesen_am %}filled{% else %}empty{% endif %}" 
+                                   data-buchung-id="{{ buchung.id }}"
+                                   value="{{ buchung.ueberwiesen_am.strftime('%Y-%m-%d') if buchung.ueberwiesen_am else '' }}"
+                                   style="width: 140px; margin: 0 auto; display: block;">
+                        </td>
                         <td style="white-space: nowrap;">
                             {% if buchung.quelle == 'Gmail' %}
                                 <span class="badge bg-info">Gmail</span>
@@ -48,8 +58,8 @@
                                 -
                             {% endif %}
                         </td>
-                        </tr>
-                        {% endfor %}
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
@@ -60,3 +70,79 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .ueberwiesen-am-input {
+        border: 2px solid;
+        transition: all 0.3s ease;
+    }
+    
+    .ueberwiesen-am-input.empty {
+        border-color: #dc3545;
+        background-color: #fff5f5;
+    }
+    
+    .ueberwiesen-am-input.filled {
+        border-color: #28a745;
+        background-color: #f0fff4;
+    }
+    
+    .ueberwiesen-am-input:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Datum-Änderungen speichern und CSS-Klassen aktualisieren
+    document.querySelectorAll('.ueberwiesen-am-input').forEach(function(input) {
+        // Initial CSS-Klasse setzen
+        updateInputClass(input);
+        
+        input.addEventListener('change', function() {
+            const buchungId = this.dataset.buchungId;
+            const datum = this.value;
+            
+            // CSS-Klasse aktualisieren
+            updateInputClass(this);
+            
+            // AJAX-Request zum Server
+            fetch('/einnahmen/ueberwiesen/' + buchungId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ueberwiesen_am: datum || null
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Datum aktualisiert');
+                } else {
+                    alert('Fehler beim Aktualisieren: ' + (data.error || 'Unbekannter Fehler'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Fehler beim Aktualisieren');
+            });
+        });
+    });
+    
+    function updateInputClass(input) {
+        if (input.value) {
+            input.classList.remove('empty');
+            input.classList.add('filled');
+        } else {
+            input.classList.remove('filled');
+            input.classList.add('empty');
+        }
+    }
+});
+</script>
+{% endblock %}
