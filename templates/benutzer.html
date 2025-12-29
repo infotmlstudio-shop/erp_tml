@@ -34,14 +34,15 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if hasattr(user, 'rolle') and user.rolle %}
+                            {% if user.rolle %}
                                 <span class="badge bg-info">{{ user.rolle.name }}</span>
                             {% else %}
                                 <span class="text-muted">Keine Rolle</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if hasattr(user, 'aktiv') and user.aktiv %}
+                            {% set user_data = benutzer_data|selectattr('id', 'equalto', user.id)|first %}
+                            {% if user_data and user_data.aktiv %}
                                 <span class="badge bg-success">Aktiv</span>
                             {% else %}
                                 <span class="badge bg-secondary">Inaktiv</span>
@@ -110,8 +111,8 @@
                         </td>
                         <td>
                             {% set count = 0 %}
-                            {% for user in benutzer_liste %}
-                                {% if hasattr(user, 'rolle_id') and user.rolle_id == rolle.id %}
+                            {% for user_data in benutzer_data %}
+                                {% if user_data.rolle_id == rolle.id %}
                                     {% set count = count + 1 %}
                                 {% endif %}
                             {% endfor %}
@@ -122,8 +123,8 @@
                                 <i class="bi bi-pencil"></i> Bearbeiten
                             </a>
                             {% set user_count_for_delete = 0 %}
-                            {% for user in benutzer_liste %}
-                                {% if hasattr(user, 'rolle_id') and user.rolle_id == rolle.id %}
+                            {% for user_data in benutzer_data %}
+                                {% if user_data.rolle_id == rolle.id %}
                                     {% set user_count_for_delete = user_count_for_delete + 1 %}
                                 {% endif %}
                             {% endfor %}

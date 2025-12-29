@@ -42,8 +42,8 @@
                         </td>
                         <td>
                             {% set count = 0 %}
-                            {% for user in benutzer_liste %}
-                                {% if hasattr(user, 'rolle_id') and user.rolle_id == rolle.id %}
+                            {% for user_data in benutzer_data %}
+                                {% if user_data.rolle_id == rolle.id %}
                                     {% set count = count + 1 %}
                                 {% endif %}
                             {% endfor %}
@@ -54,8 +54,8 @@
                                 <i class="bi bi-pencil"></i> Bearbeiten
                             </a>
                             {% set user_count_for_delete = 0 %}
-                            {% for user in benutzer_liste %}
-                                {% if hasattr(user, 'rolle_id') and user.rolle_id == rolle.id %}
+                            {% for user_data in benutzer_data %}
+                                {% if user_data.rolle_id == rolle.id %}
                                     {% set user_count_for_delete = user_count_for_delete + 1 %}
                                 {% endif %}
                             {% endfor %}

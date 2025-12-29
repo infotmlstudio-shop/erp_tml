@@ -25,7 +25,7 @@
                 <select class="form-select" id="rolle_id" name="rolle_id">
                     <option value="">Keine Rolle</option>
                     {% for rolle in rollen %}
-                    <option value="{{ rolle.id }}" {% if user and hasattr(user, 'rolle_id') and user.rolle_id == rolle.id %}selected{% endif %}>
+                    <option value="{{ rolle.id }}" {% if user and getattr(user, 'rolle_id', None) == rolle.id %}selected{% endif %}>
                         {{ rolle.name }}
                     </option>
                     {% endfor %}
@@ -33,7 +33,7 @@
             </div>
             <div class="mb-3">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="aktiv" name="aktiv" {% if not user or (hasattr(user, 'aktiv') and user.aktiv) or not hasattr(user, 'aktiv') %}checked{% endif %}>
+                    <input class="form-check-input" type="checkbox" id="aktiv" name="aktiv" {% if not user or getattr(user, 'aktiv', True) %}checked{% endif %}>
                     <label class="form-check-label" for="aktiv">
                         Aktiv
                     </label>

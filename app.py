@@ -690,6 +690,19 @@ def benutzer():
             app.logger.error(f"Fehler beim Laden der Rollen: {e}")
             rollen = []
         
+        # Benutzer-Daten für Template vorbereiten (prüfe ob Felder existieren)
+        benutzer_data = []
+        for user in benutzer_liste:
+            user_dict = {
+                'id': user.id,
+                'username': user.username,
+                'rolle_id': getattr(user, 'rolle_id', None),
+                'aktiv': getattr(user, 'aktiv', True),  # Default: True wenn nicht vorhanden
+                'created_at': user.created_at,
+                'rolle': getattr(user, 'rolle', None)
+            }
+            benutzer_data.append(user_dict)
+        
         # Berechtigungen für Template vorbereiten
         import json
         rollen_mit_berechtigungen = []
@@ -700,7 +713,7 @@ def benutzer():
                 perms = {}
             rollen_mit_berechtigungen.append((rolle, perms))
         
-        return render_template('benutzer.html', benutzer_liste=benutzer_liste, rollen=rollen, rollen_mit_berechtigungen=rollen_mit_berechtigungen)
+        return render_template('benutzer.html', benutzer_liste=benutzer_liste, benutzer_data=benutzer_data, rollen=rollen, rollen_mit_berechtigungen=rollen_mit_berechtigungen)
     except Exception as e:
         app.logger.error(f"Fehler in benutzer(): {e}")
         import traceback
@@ -824,24 +837,43 @@ def benutzer_loeschen(id):
 @login_required
 def rollen():
     """Rollen-Übersicht"""
-    if not current_user.hat_berechtigung('benutzer'):
-        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+    try:
+        if not current_user.hat_berechtigung('benutzer'):
+            flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+            return redirect(url_for('index'))
+        
+        rollen_liste = Rolle.query.order_by(Rolle.name).all()
+        benutzer_liste = User.query.all()
+        
+        # Benutzer-Daten für Template vorbereiten (prüfe ob Felder existieren)
+        benutzer_data = []
+        for user in benutzer_liste:
+            user_dict = {
+                'id': user.id,
+                'username': user.username,
+                'rolle_id': getattr(user, 'rolle_id', None),
+                'aktiv': getattr(user, 'aktiv', True),
+                'created_at': user.created_at
+            }
+            benutzer_data.append(user_dict)
+        
+        # Berechtigungen für Template vorbereiten
+        import json
+        rollen_mit_berechtigungen = []
+        for rolle in rollen_liste:
+            try:
+                perms = json.loads(rolle.berechtigungen) if rolle.berechtigungen else {}
+            except:
+                perms = {}
+            rollen_mit_berechtigungen.append((rolle, perms))
+        
+        return render_template('rollen.html', rollen_liste=rollen_liste, benutzer_liste=benutzer_liste, benutzer_data=benutzer_data, rollen_mit_berechtigungen=rollen_mit_berechtigungen)
+    except Exception as e:
+        app.logger.error(f"Fehler in rollen(): {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
+        flash(f'Fehler beim Laden der Rollenverwaltung: {str(e)}', 'error')
         return redirect(url_for('index'))
-    
-    rollen_liste = Rolle.query.order_by(Rolle.name).all()
-    benutzer_liste = User.query.all()
-    
-    # Berechtigungen für Template vorbereiten
-    import json
-    rollen_mit_berechtigungen = []
-    for rolle in rollen_liste:
-        try:
-            perms = json.loads(rolle.berechtigungen)
-        except:
-            perms = {}
-        rollen_mit_berechtigungen.append((rolle, perms))
-    
-    return render_template('rollen.html', rollen_liste=rollen_liste, benutzer_liste=benutzer_liste, rollen_mit_berechtigungen=rollen_mit_berechtigungen)
 
 @app.route('/einstellungen/rollen/neu', methods=['GET', 'POST'])
 @login_required
