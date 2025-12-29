@@ -34,14 +34,14 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if user.rolle %}
+                            {% if hasattr(user, 'rolle') and user.rolle %}
                                 <span class="badge bg-info">{{ user.rolle.name }}</span>
                             {% else %}
                                 <span class="text-muted">Keine Rolle</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if user.aktiv %}
+                            {% if hasattr(user, 'aktiv') and user.aktiv %}
                                 <span class="badge bg-success">Aktiv</span>
                             {% else %}
                                 <span class="badge bg-secondary">Inaktiv</span>
@@ -111,7 +111,7 @@
                         <td>
                             {% set count = 0 %}
                             {% for user in benutzer_liste %}
-                                {% if user.rolle_id == rolle.id %}
+                                {% if hasattr(user, 'rolle_id') and user.rolle_id == rolle.id %}
                                     {% set count = count + 1 %}
                                 {% endif %}
                             {% endfor %}
@@ -123,7 +123,7 @@
                             </a>
                             {% set user_count_for_delete = 0 %}
                             {% for user in benutzer_liste %}
-                                {% if user.rolle_id == rolle.id %}
+                                {% if hasattr(user, 'rolle_id') and user.rolle_id == rolle.id %}
                                     {% set user_count_for_delete = user_count_for_delete + 1 %}
                                 {% endif %}
                             {% endfor %}

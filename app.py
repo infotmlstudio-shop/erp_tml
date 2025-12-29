@@ -768,6 +768,7 @@ def benutzer_bearbeiten(id):
             existing = User.query.filter_by(username=username).first()
             if existing and existing.id != id:
                 flash('Ein Benutzer mit diesem Namen existiert bereits.', 'error')
+                # Weiterleiten mit id Parameter
                 return redirect(url_for('benutzer_bearbeiten', id=id))
             
             user.username = username
@@ -903,6 +904,7 @@ def rollen_bearbeiten(id):
             existing = Rolle.query.filter_by(name=name).first()
             if existing and existing.id != id:
                 flash('Eine Rolle mit diesem Namen existiert bereits.', 'error')
+                # Weiterleiten mit id Parameter
                 return redirect(url_for('rollen_bearbeiten', id=id))
             
             rolle.name = name
@@ -927,6 +929,7 @@ def rollen_bearbeiten(id):
         import traceback
         app.logger.error(traceback.format_exc())
         flash(f'Fehler beim Laden der Rollendaten: {str(e)}', 'error')
+        # Zurück zur Rollen-Übersicht, nicht zu rollen_bearbeiten
         return redirect(url_for('rollen'))
 
 @app.route('/einstellungen/rollen/<int:id>/loeschen', methods=['POST'])
