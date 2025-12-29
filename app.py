@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Lieferant, Buchung
+from models import db, User, Lieferant, Buchung, Lager, Artikel
 from config import Config
 from datetime import datetime, date
 from decimal import Decimal
@@ -399,6 +399,194 @@ def lieferanten_loeschen(id):
     
     flash('Lieferant erfolgreich gelöscht.', 'success')
     return redirect(url_for('lieferanten'))
+
+# ==================== LAGERVERWALTUNG ====================
+
+@app.route('/lager')
+@login_required
+def lager():
+    """Lager-Übersicht"""
+    lager_id = request.args.get('lager_id', type=int)
+    lager_liste = Lager.query.filter_by(aktiv=True).order_by(Lager.name).all()
+    
+    if not lager_liste:
+        flash('Keine Lager vorhanden. Bitte erstellen Sie zuerst ein Lager.', 'info')
+        return redirect(url_for('lager_neu'))
+    
+    # Standard-Lager auswählen
+    if not lager_id:
+        lager_id = lager_liste[0].id
+    
+    aktuelles_lager = Lager.query.get_or_404(lager_id)
+    artikel = Artikel.query.filter_by(lager_id=lager_id).order_by(Artikel.name).all()
+    
+    # Artikelanzahl pro Lager für Template
+    artikel_anzahl = {}
+    for l in lager_liste:
+        artikel_anzahl[l.id] = Artikel.query.filter_by(lager_id=l.id).count()
+    
+    return render_template('lager.html', 
+                         lager_liste=lager_liste,
+                         aktuelles_lager=aktuelles_lager,
+                         artikel=artikel,
+                         lager_id=lager_id,
+                         artikel_anzahl=artikel_anzahl)
+
+@app.route('/lager/neu', methods=['GET', 'POST'])
+@login_required
+def lager_neu():
+    """Neues Lager anlegen"""
+    if request.method == 'POST':
+        name = request.form.get('name')
+        beschreibung = request.form.get('beschreibung', '')
+        aktiv = request.form.get('aktiv') == 'on'
+        
+        if Lager.query.filter_by(name=name).first():
+            flash('Ein Lager mit diesem Namen existiert bereits.', 'error')
+            return render_template('lager_form.html')
+        
+        lager = Lager(
+            name=name,
+            beschreibung=beschreibung,
+            aktiv=aktiv
+        )
+        
+        db.session.add(lager)
+        db.session.commit()
+        
+        flash('Lager erfolgreich angelegt.', 'success')
+        return redirect(url_for('lager', lager_id=lager.id))
+    
+    return render_template('lager_form.html')
+
+@app.route('/lager/<int:id>/bearbeiten', methods=['GET', 'POST'])
+@login_required
+def lager_bearbeiten(id):
+    """Lager bearbeiten"""
+    lager = Lager.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        beschreibung = request.form.get('beschreibung', '')
+        aktiv = request.form.get('aktiv') == 'on'
+        
+        # Prüfen ob Name bereits existiert (außer aktuellem Lager)
+        existing = Lager.query.filter_by(name=name).first()
+        if existing and existing.id != id:
+            flash('Ein Lager mit diesem Namen existiert bereits.', 'error')
+            return render_template('lager_form.html', lager=lager)
+        
+        lager.name = name
+        lager.beschreibung = beschreibung
+        lager.aktiv = aktiv
+        db.session.commit()
+        
+        flash('Lager erfolgreich aktualisiert.', 'success')
+        return redirect(url_for('lager', lager_id=lager.id))
+    
+    return render_template('lager_form.html', lager=lager)
+
+@app.route('/lager/<int:id>/loeschen', methods=['POST'])
+@login_required
+def lager_loeschen(id):
+    """Lager löschen"""
+    lager = Lager.query.get_or_404(id)
+    
+    # Prüfen ob Artikel vorhanden
+    if Artikel.query.filter_by(lager_id=id).count() > 0:
+        flash('Lager kann nicht gelöscht werden, da noch Artikel vorhanden sind.', 'error')
+        return redirect(url_for('lager', lager_id=id))
+    
+    db.session.delete(lager)
+    db.session.commit()
+    flash('Lager erfolgreich gelöscht.', 'success')
+    return redirect(url_for('lager'))
+
+# ==================== ARTIKELVERWALTUNG ====================
+
+@app.route('/artikel/neu', methods=['GET', 'POST'])
+@login_required
+def artikel_neu():
+    """Neuen Artikel anlegen"""
+    lager_id = request.args.get('lager_id', type=int)
+    
+    if request.method == 'POST':
+        lager_id = request.form.get('lager_id', type=int)
+        name = request.form.get('name')
+        beschreibung = request.form.get('beschreibung', '')
+        bestand = request.form.get('bestand', type=int) or 0
+        mindestbestand = request.form.get('mindestbestand', type=int) or 0
+        einkaufspreis = request.form.get('einkaufspreis')
+        einkaufspreis = Decimal(einkaufspreis) if einkaufspreis else None
+        
+        # Artikelnummer automatisch generieren
+        artikelnummer = f"SKU-{datetime.now().strftime('%Y%m%d%H%M%S')}-{db.session.query(Artikel).count() + 1}"
+        
+        artikel = Artikel(
+            artikelnummer=artikelnummer,
+            name=name,
+            beschreibung=beschreibung,
+            bestand=bestand,
+            mindestbestand=mindestbestand,
+            einkaufspreis=einkaufspreis,
+            lager_id=lager_id
+        )
+        
+        db.session.add(artikel)
+        db.session.commit()
+        
+        flash('Artikel erfolgreich angelegt.', 'success')
+        return redirect(url_for('lager', lager_id=lager_id))
+    
+    lager_liste = Lager.query.filter_by(aktiv=True).order_by(Lager.name).all()
+    if not lager_liste:
+        flash('Bitte erstellen Sie zuerst ein Lager.', 'error')
+        return redirect(url_for('lager_neu'))
+    
+    if not lager_id:
+        lager_id = lager_liste[0].id
+    
+    return render_template('artikel_form.html', lager_liste=lager_liste, lager_id=lager_id)
+
+@app.route('/artikel/<int:id>/bearbeiten', methods=['GET', 'POST'])
+@login_required
+def artikel_bearbeiten(id):
+    """Artikel bearbeiten"""
+    artikel = Artikel.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        beschreibung = request.form.get('beschreibung', '')
+        bestand = request.form.get('bestand', type=int) or 0
+        mindestbestand = request.form.get('mindestbestand', type=int) or 0
+        einkaufspreis = request.form.get('einkaufspreis')
+        einkaufspreis = Decimal(einkaufspreis) if einkaufspreis else None
+        lager_id = request.form.get('lager_id', type=int)
+        
+        artikel.name = name
+        artikel.beschreibung = beschreibung
+        artikel.bestand = bestand
+        artikel.mindestbestand = mindestbestand
+        artikel.einkaufspreis = einkaufspreis
+        artikel.lager_id = lager_id
+        db.session.commit()
+        
+        flash('Artikel erfolgreich aktualisiert.', 'success')
+        return redirect(url_for('lager', lager_id=lager_id))
+    
+    lager_liste = Lager.query.filter_by(aktiv=True).order_by(Lager.name).all()
+    return render_template('artikel_form.html', artikel=artikel, lager_liste=lager_liste, lager_id=artikel.lager_id)
+
+@app.route('/artikel/<int:id>/loeschen', methods=['POST'])
+@login_required
+def artikel_loeschen(id):
+    """Artikel löschen"""
+    artikel = Artikel.query.get_or_404(id)
+    lager_id = artikel.lager_id
+    db.session.delete(artikel)
+    db.session.commit()
+    flash('Artikel erfolgreich gelöscht.', 'success')
+    return redirect(url_for('lager', lager_id=lager_id))
 
 @app.route('/gmail/sync', methods=['POST'])
 @login_required

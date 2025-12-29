@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block page_title %}{% if artikel %}Artikel bearbeiten{% else %}Neuer Artikel{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4>{% if artikel %}Artikel bearbeiten{% else %}Neuer Artikel{% endif %}</h4>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="lager_id" class="form-label">Lager *</label>
+                <select class="form-select" id="lager_id" name="lager_id" required>
+                    {% for l in lager_liste %}
+                    <option value="{{ l.id }}" {% if l.id == lager_id or (artikel and artikel.lager_id == l.id) %}selected{% endif %}>
+                        {{ l.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if artikel %}
+            <div class="mb-3">
+                <label for="artikelnummer" class="form-label">Artikelnummer (SKU)</label>
+                <input type="text" class="form-control" id="artikelnummer" value="{{ artikel.artikelnummer }}" disabled>
+                <small class="form-text text-muted">Artikelnummer kann nicht geändert werden</small>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Die Artikelnummer (SKU) wird automatisch generiert.
+            </div>
+            {% endif %}
+            <div class="mb-3">
+                <label for="name" class="form-label">Name *</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ artikel.name if artikel else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="beschreibung" class="form-label">Beschreibung</label>
+                <textarea class="form-control" id="beschreibung" name="beschreibung" rows="3">{{ artikel.beschreibung if artikel else '' }}</textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="bestand" class="form-label">Bestand *</label>
+                        <input type="number" class="form-control" id="bestand" name="bestand" value="{{ artikel.bestand if artikel else 0 }}" min="0" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="mindestbestand" class="form-label">Mindestbestand *</label>
+                        <input type="number" class="form-control" id="mindestbestand" name="mindestbestand" value="{{ artikel.mindestbestand if artikel else 0 }}" min="0" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="einkaufspreis" class="form-label">Einkaufspreis (€)</label>
+                        <input type="number" step="0.01" class="form-control" id="einkaufspreis" name="einkaufspreis" value="{{ artikel.einkaufspreis if artikel and artikel.einkaufspreis else '' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> Speichern
+                </button>
+                <a href="{{ url_for('lager', lager_id=lager_id) }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Abbrechen
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

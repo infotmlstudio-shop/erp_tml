@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block page_title %}Lagerverwaltung{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>{{ aktuelles_lager.name }}</h3>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('artikel_neu', lager_id=aktuelles_lager.id) }}" class="btn btn-success">
+            <i class="bi bi-plus-circle"></i> Neuer Artikel
+        </a>
+        <a href="{{ url_for('lager_neu') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Neues Lager
+        </a>
+    </div>
+</div>
+
+{% if aktuelles_lager.beschreibung %}
+<div class="alert alert-info mb-3">
+    <strong>Beschreibung:</strong> {{ aktuelles_lager.beschreibung }}
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        {% if artikel %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Artikelnummer</th>
+                        <th style="width: 20%;">Name</th>
+                        <th style="width: 30%;">Beschreibung</th>
+                        <th style="width: 10%;" class="text-center">Bestand</th>
+                        <th style="width: 10%;" class="text-center">Mindestbestand</th>
+                        <th style="width: 10%;" class="text-end">Einkaufspreis</th>
+                        <th style="width: 5%;">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for art in artikel %}
+                    <tr class="{% if art.ist_niedrig() %}table-danger{% endif %}">
+                        <td><code>{{ art.artikelnummer }}</code></td>
+                        <td><strong>{{ art.name }}</strong></td>
+                        <td>{{ art.beschreibung or '-' }}</td>
+                        <td class="text-center">
+                            <span class="badge {% if art.ist_niedrig() %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {{ art.bestand }} Stk
+                            </span>
+                        </td>
+                        <td class="text-center">{{ art.mindestbestand }} Stk</td>
+                        <td class="text-end">
+                            {% if art.einkaufspreis %}
+                                {{ "%.2f"|format(art.einkaufspreis) }} €
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('artikel_bearbeiten', id=art.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('artikel_loeschen', id=art.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diesen Artikel wirklich löschen?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4">Keine Artikel in diesem Lager vorhanden.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Lager-Verwaltung -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">Alle Lager</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Beschreibung</th>
+                        <th>Artikel</th>
+                        <th>Status</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for l in lager_liste %}
+                    <tr class="{% if l.id == aktuelles_lager.id %}table-active{% endif %}">
+                        <td>
+                            {% if l.id == aktuelles_lager.id %}
+                                <strong>{{ l.name }}</strong>
+                            {% else %}
+                                <a href="{{ url_for('lager', lager_id=l.id) }}">{{ l.name }}</a>
+                            {% endif %}
+                        </td>
+                        <td>{{ l.beschreibung or '-' }}</td>
+                        <td>{{ artikel_anzahl[l.id] }} Artikel</td>
+                        <td>
+                            {% if l.aktiv %}
+                                <span class="badge bg-success">Aktiv</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inaktiv</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('lager_bearbeiten', id=l.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% if l.id != aktuelles_lager.id %}
+                            <form method="POST" action="{{ url_for('lager_loeschen', id=l.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie dieses Lager wirklich löschen?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

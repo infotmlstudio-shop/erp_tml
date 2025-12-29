@@ -79,6 +79,11 @@
                             <i class="bi bi-people"></i> Lieferanten
                         </a>
                     </li>
+                    <li class="nav-item mb-2">
+                        <a class="nav-link {% if 'lager' in request.endpoint or 'artikel' in request.endpoint %}active{% endif %}" href="{{ url_for('lager') }}">
+                            <i class="bi bi-box-seam"></i> Lager
+                        </a>
+                    </li>
                     <li class="nav-item mt-4">
                         <a class="nav-link text-danger" href="{{ url_for('logout') }}">
                             <i class="bi bi-box-arrow-right"></i> Abmelden
@@ -93,7 +98,20 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2>{% block page_title %}Dashboard{% endblock %}</h2>
                     <div class="d-flex align-items-center gap-3">
-                        {% if 'lieferanten' not in request.endpoint %}
+                        {% if 'lager' in request.endpoint or 'artikel' in request.endpoint %}
+                        <!-- Lager-Switcher -->
+                        {% if lager_liste %}
+                        <form method="GET" action="{{ url_for('lager') }}" class="d-flex align-items-center gap-2">
+                            <label for="lager_id" class="form-label mb-0">Lager:</label>
+                            <select name="lager_id" id="lager_id" class="form-select" style="width: auto;" onchange="this.form.submit()">
+                                {% for l in lager_liste %}
+                                <option value="{{ l.id }}" {% if lager_id == l.id %}selected{% endif %}>{{ l.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        {% endif %}
+                        {% elif 'lieferanten' not in request.endpoint %}
+                        <!-- Jahresfilter -->
                         <form method="GET" action="{{ url_for(request.endpoint or 'index') }}" class="d-flex align-items-center gap-2">
                             <label for="jahr" class="form-label mb-0">Jahr:</label>
                             <select name="jahr" id="jahr" class="form-select" style="width: auto;" onchange="this.form.submit()">

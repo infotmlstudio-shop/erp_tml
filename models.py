@@ -61,3 +61,40 @@ class Buchung(db.Model):
     def __repr__(self):
         return f'<Buchung {self.typ} {self.betrag} {self.datum}>'
 
+
+class Lager(db.Model):
+    """Lager-Modell"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    beschreibung = db.Column(db.String(500), nullable=True)
+    aktiv = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Beziehung zu Artikeln
+    artikel = db.relationship('Artikel', backref='lager', lazy=True, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Lager {self.name}>'
+
+
+class Artikel(db.Model):
+    """Artikel-Modell"""
+    id = db.Column(db.Integer, primary_key=True)
+    artikelnummer = db.Column(db.String(50), nullable=False, unique=True)  # SKU
+    name = db.Column(db.String(200), nullable=False)
+    beschreibung = db.Column(db.Text, nullable=True)
+    bestand = db.Column(db.Integer, default=0, nullable=False)
+    mindestbestand = db.Column(db.Integer, default=0, nullable=False)
+    einkaufspreis = db.Column(db.Numeric(10, 2), nullable=True)
+    lager_id = db.Column(db.Integer, db.ForeignKey('lager.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Artikel {self.artikelnummer} {self.name}>'
+    
+    def ist_niedrig(self):
+        """Prüft ob Bestand unter Mindestbestand ist"""
+        return self.bestand <= self.mindestbestand
+
