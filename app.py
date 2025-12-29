@@ -670,6 +670,252 @@ def rechnungen(filename):
     """PDF-Dateien ausliefern"""
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
+# ==================== BENUTZER- UND ROLLENVERWALTUNG ====================
+
+@app.route('/einstellungen/benutzer')
+@login_required
+def benutzer():
+    """Benutzer-Übersicht"""
+    if not current_user.hat_berechtigung('benutzer'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    benutzer_liste = User.query.order_by(User.username).all()
+    rollen = Rolle.query.order_by(Rolle.name).all()
+    
+    # Berechtigungen für Template vorbereiten
+    import json
+    rollen_mit_berechtigungen = []
+    for rolle in rollen:
+        try:
+            perms = json.loads(rolle.berechtigungen)
+        except:
+            perms = {}
+        rollen_mit_berechtigungen.append((rolle, perms))
+    
+    return render_template('benutzer.html', benutzer_liste=benutzer_liste, rollen=rollen, rollen_mit_berechtigungen=rollen_mit_berechtigungen)
+
+@app.route('/einstellungen/benutzer/neu', methods=['GET', 'POST'])
+@login_required
+def benutzer_neu():
+    """Neuen Benutzer anlegen"""
+    if not current_user.hat_berechtigung('benutzer'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        rolle_id = request.form.get('rolle_id', type=int)
+        aktiv = request.form.get('aktiv') == 'on'
+        
+        if User.query.filter_by(username=username).first():
+            flash('Ein Benutzer mit diesem Namen existiert bereits.', 'error')
+            return redirect(url_for('benutzer_neu'))
+        
+        user = User(
+            username=username,
+            rolle_id=rolle_id if rolle_id else None,
+            aktiv=aktiv
+        )
+        user.set_password(password)
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        flash('Benutzer erfolgreich angelegt.', 'success')
+        return redirect(url_for('benutzer'))
+    
+    rollen = Rolle.query.order_by(Rolle.name).all()
+    return render_template('benutzer_form.html', rollen=rollen)
+
+@app.route('/einstellungen/benutzer/<int:id>/bearbeiten', methods=['GET', 'POST'])
+@login_required
+def benutzer_bearbeiten(id):
+    """Benutzer bearbeiten"""
+    if not current_user.hat_berechtigung('benutzer'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    user = User.query.get_or_404(id)
+    
+    # Admin kann nicht bearbeitet werden (außer Passwort)
+    if user.username == 'admin' and current_user.username != 'admin':
+        flash('Der Admin-Benutzer kann nicht bearbeitet werden.', 'error')
+        return redirect(url_for('benutzer'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        rolle_id = request.form.get('rolle_id', type=int)
+        aktiv = request.form.get('aktiv') == 'on'
+        
+        # Prüfen ob Username bereits existiert (außer aktuellem Benutzer)
+        existing = User.query.filter_by(username=username).first()
+        if existing and existing.id != id:
+            flash('Ein Benutzer mit diesem Namen existiert bereits.', 'error')
+            return redirect(url_for('benutzer_bearbeiten', id=id))
+        
+        user.username = username
+        if password:
+            user.set_password(password)
+        user.rolle_id = rolle_id if rolle_id else None
+        user.aktiv = aktiv
+        db.session.commit()
+        
+        flash('Benutzer erfolgreich aktualisiert.', 'success')
+        return redirect(url_for('benutzer'))
+    
+    rollen = Rolle.query.order_by(Rolle.name).all()
+    return render_template('benutzer_form.html', user=user, rollen=rollen)
+
+@app.route('/einstellungen/benutzer/<int:id>/loeschen', methods=['POST'])
+@login_required
+def benutzer_loeschen(id):
+    """Benutzer löschen"""
+    if not current_user.hat_berechtigung('benutzer'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    user = User.query.get_or_404(id)
+    
+    # Admin kann nicht gelöscht werden
+    if user.username == 'admin':
+        flash('Der Admin-Benutzer kann nicht gelöscht werden.', 'error')
+        return redirect(url_for('benutzer'))
+    
+    # Sich selbst kann man nicht löschen
+    if user.id == current_user.id:
+        flash('Sie können sich nicht selbst löschen.', 'error')
+        return redirect(url_for('benutzer'))
+    
+    db.session.delete(user)
+    db.session.commit()
+    flash('Benutzer erfolgreich gelöscht.', 'success')
+    return redirect(url_for('benutzer'))
+
+@app.route('/einstellungen/rollen')
+@login_required
+def rollen():
+    """Rollen-Übersicht"""
+    if not current_user.hat_berechtigung('benutzer'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    rollen_liste = Rolle.query.order_by(Rolle.name).all()
+    benutzer_liste = User.query.all()
+    
+    # Berechtigungen für Template vorbereiten
+    import json
+    rollen_mit_berechtigungen = []
+    for rolle in rollen_liste:
+        try:
+            perms = json.loads(rolle.berechtigungen)
+        except:
+            perms = {}
+        rollen_mit_berechtigungen.append((rolle, perms))
+    
+    return render_template('rollen.html', rollen_liste=rollen_liste, benutzer_liste=benutzer_liste, rollen_mit_berechtigungen=rollen_mit_berechtigungen)
+
+@app.route('/einstellungen/rollen/neu', methods=['GET', 'POST'])
+@login_required
+def rollen_neu():
+    """Neue Rolle anlegen"""
+    if not current_user.hat_berechtigung('benutzer'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        beschreibung = request.form.get('beschreibung', '')
+        
+        # Berechtigungen sammeln
+        import json
+        berechtigungen = {}
+        for bereich in ['dashboard', 'einnahmen', 'ausgaben', 'lieferanten', 'lager', 'benutzer']:
+            berechtigungen[bereich] = request.form.get(f'berechtigung_{bereich}') == 'on'
+        
+        if Rolle.query.filter_by(name=name).first():
+            flash('Eine Rolle mit diesem Namen existiert bereits.', 'error')
+            return redirect(url_for('rollen_neu'))
+        
+        rolle = Rolle(
+            name=name,
+            beschreibung=beschreibung,
+            berechtigungen=json.dumps(berechtigungen)
+        )
+        
+        db.session.add(rolle)
+        db.session.commit()
+        
+        flash('Rolle erfolgreich angelegt.', 'success')
+        return redirect(url_for('rollen'))
+    
+    return render_template('rollen_form.html')
+
+@app.route('/einstellungen/rollen/<int:id>/bearbeiten', methods=['GET', 'POST'])
+@login_required
+def rollen_bearbeiten(id):
+    """Rolle bearbeiten"""
+    if not current_user.hat_berechtigung('benutzer'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    rolle = Rolle.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        beschreibung = request.form.get('beschreibung', '')
+        
+        # Berechtigungen sammeln
+        import json
+        berechtigungen = {}
+        for bereich in ['dashboard', 'einnahmen', 'ausgaben', 'lieferanten', 'lager', 'benutzer']:
+            berechtigungen[bereich] = request.form.get(f'berechtigung_{bereich}') == 'on'
+        
+        # Prüfen ob Name bereits existiert (außer aktueller Rolle)
+        existing = Rolle.query.filter_by(name=name).first()
+        if existing and existing.id != id:
+            flash('Eine Rolle mit diesem Namen existiert bereits.', 'error')
+            return redirect(url_for('rollen_bearbeiten', id=id))
+        
+        rolle.name = name
+        rolle.beschreibung = beschreibung
+        rolle.berechtigungen = json.dumps(berechtigungen)
+        db.session.commit()
+        
+        flash('Rolle erfolgreich aktualisiert.', 'success')
+        return redirect(url_for('rollen'))
+    
+    # Berechtigungen für Template vorbereiten
+    import json
+    try:
+        berechtigungen = json.loads(rolle.berechtigungen)
+    except:
+        berechtigungen = {}
+    
+    return render_template('rollen_form.html', rolle=rolle, berechtigungen=berechtigungen)
+
+@app.route('/einstellungen/rollen/<int:id>/loeschen', methods=['POST'])
+@login_required
+def rollen_loeschen(id):
+    """Rolle löschen"""
+    if not current_user.hat_berechtigung('benutzer'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    rolle = Rolle.query.get_or_404(id)
+    
+    # Prüfen ob Benutzer diese Rolle haben
+    if User.query.filter_by(rolle_id=id).count() > 0:
+        flash('Rolle kann nicht gelöscht werden, da noch Benutzer diese Rolle haben.', 'error')
+        return redirect(url_for('rollen'))
+    
+    db.session.delete(rolle)
+    db.session.commit()
+    flash('Rolle erfolgreich gelöscht.', 'success')
+    return redirect(url_for('rollen'))
+
 # Initialisierung
 def init_db():
     """Datenbank initialisieren"""
