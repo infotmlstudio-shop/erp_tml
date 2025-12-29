@@ -121,7 +121,13 @@
                             <a href="{{ url_for('rollen_bearbeiten', id=rolle.id) }}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i> Bearbeiten
                             </a>
-                            {% if User.query.filter_by(rolle_id=rolle.id).count() == 0 %}
+                            {% set user_count_for_delete = 0 %}
+                            {% for user in benutzer_liste %}
+                                {% if user.rolle_id == rolle.id %}
+                                    {% set user_count_for_delete = user_count_for_delete + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if user_count_for_delete == 0 %}
                             <form method="POST" action="{{ url_for('rollen_loeschen', id=rolle.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diese Rolle wirklich löschen?');">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                     <i class="bi bi-trash"></i> Löschen
