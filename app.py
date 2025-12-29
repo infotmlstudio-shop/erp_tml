@@ -676,24 +676,37 @@ def rechnungen(filename):
 @login_required
 def benutzer():
     """Benutzer-Übersicht"""
-    if not current_user.hat_berechtigung('benutzer'):
-        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
-        return redirect(url_for('index'))
-    
-    benutzer_liste = User.query.order_by(User.username).all()
-    rollen = Rolle.query.order_by(Rolle.name).all()
-    
-    # Berechtigungen für Template vorbereiten
-    import json
-    rollen_mit_berechtigungen = []
-    for rolle in rollen:
+    try:
+        if not current_user.hat_berechtigung('benutzer'):
+            flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+            return redirect(url_for('index'))
+        
+        benutzer_liste = User.query.order_by(User.username).all()
+        
+        # Prüfe ob Rolle-Tabelle existiert
         try:
-            perms = json.loads(rolle.berechtigungen)
-        except:
-            perms = {}
-        rollen_mit_berechtigungen.append((rolle, perms))
-    
-    return render_template('benutzer.html', benutzer_liste=benutzer_liste, rollen=rollen, rollen_mit_berechtigungen=rollen_mit_berechtigungen)
+            rollen = Rolle.query.order_by(Rolle.name).all()
+        except Exception as e:
+            app.logger.error(f"Fehler beim Laden der Rollen: {e}")
+            rollen = []
+        
+        # Berechtigungen für Template vorbereiten
+        import json
+        rollen_mit_berechtigungen = []
+        for rolle in rollen:
+            try:
+                perms = json.loads(rolle.berechtigungen) if rolle.berechtigungen else {}
+            except:
+                perms = {}
+            rollen_mit_berechtigungen.append((rolle, perms))
+        
+        return render_template('benutzer.html', benutzer_liste=benutzer_liste, rollen=rollen, rollen_mit_berechtigungen=rollen_mit_berechtigungen)
+    except Exception as e:
+        app.logger.error(f"Fehler in benutzer(): {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
+        flash(f'Fehler beim Laden der Benutzerverwaltung: {str(e)}', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/einstellungen/benutzer/neu', methods=['GET', 'POST'])
 @login_required

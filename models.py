@@ -53,12 +53,20 @@ class User(UserMixin, db.Model):
     
     def hat_berechtigung(self, bereich):
         """Prüft ob Benutzer Berechtigung für einen Bereich hat"""
-        # Admin hat immer alle Berechtigungen
-        if self.username == 'admin':
-            return True
-        if not self.rolle or not self.aktiv:
-            return False
-        return self.rolle.hat_berechtigung(bereich)
+        try:
+            # Admin hat immer alle Berechtigungen
+            if self.username == 'admin':
+                return True
+            # Prüfe ob Benutzer aktiv ist (None wird als False behandelt)
+            if self.aktiv is False or self.aktiv is None:
+                return False
+            # Prüfe ob Rolle existiert
+            if not self.rolle:
+                return False
+            return self.rolle.hat_berechtigung(bereich)
+        except Exception as e:
+            # Bei Fehler: Admin hat immer Zugriff, andere nicht
+            return self.username == 'admin' if hasattr(self, 'username') else False
     
     def __repr__(self):
         return f'<User {self.username}>'
