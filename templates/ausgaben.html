@@ -38,7 +38,7 @@
                             <th style="width: 10%;">Betrag</th>
                             <th style="width: 22%;">Titel</th>
                             <th style="width: 18%;">Rechnungsnummer</th>
-                            <th style="width: 18%;">Von Zielkonto abgebucht</th>
+                            <th style="width: 18%;" class="text-center">Von Zielkonto abgebucht</th>
                             <th style="width: 10%;">Quelle</th>
                             <th style="width: 8%;">PDF</th>
                         </tr>
@@ -50,14 +50,13 @@
                             <td class="text-danger fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
                             <td style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
                             <td style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
-                            <td class="text-center align-middle">
-                                <div class="d-flex justify-content-center align-items-center" style="min-height: 2em;">
-                                    <input type="checkbox" 
-                                           class="form-check-input zielkonto-checkbox" 
-                                           id="zielkonto-{{ buchung.id }}"
-                                           data-buchung-id="{{ buchung.id }}"
-                                           {% if buchung.von_zielkonto_abgebucht == True or buchung.von_zielkonto_abgebucht == 1 %}checked{% endif %}>
-                                </div>
+                            <td class="text-center align-middle" style="vertical-align: middle; padding: 0.75rem;">
+                                <input type="checkbox" 
+                                       class="form-check-input zielkonto-checkbox" 
+                                       id="zielkonto-{{ buchung.id }}"
+                                       data-buchung-id="{{ buchung.id }}"
+                                       style="margin: 0 auto; display: block;"
+                                       {% if buchung.von_zielkonto_abgebucht == True or buchung.von_zielkonto_abgebucht == 1 %}checked{% endif %}>
                             </td>
                             <td style="white-space: nowrap;">
                                 {% if buchung.quelle == 'Gmail' %}
