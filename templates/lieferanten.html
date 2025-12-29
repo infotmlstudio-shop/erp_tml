@@ -3,10 +3,10 @@
 {% block page_title %}Lieferanten-Verwaltung{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Lieferanten</h3>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0">Lieferanten</h3>
     <a href="{{ url_for('lieferanten_neu') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> Neuer Lieferant
+        <i class="bi bi-plus-circle"></i> <span class="d-none d-md-inline">Neuer Lieferant</span><span class="d-md-none">Neu</span>
     </a>
 </div>
 
@@ -27,37 +27,39 @@
                 <tbody>
                     {% for lieferant in lieferanten %}
                     <tr>
-                        <td>{{ lieferant.name }}</td>
-                        <td>
+                        <td data-label="Name">{{ lieferant.name }}</td>
+                        <td data-label="Typ">
                             {% if lieferant.typ == 'Einnahme' %}
                                 <span class="badge bg-success">Einnahme</span>
                             {% else %}
                                 <span class="badge bg-danger">Ausgabe</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Gmail-Label">
                             {% if lieferant.gmail_label %}
-                                <code>{{ lieferant.gmail_label }}</code>
+                                <code class="small">{{ lieferant.gmail_label }}</code>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Status">
                             {% if lieferant.aktiv %}
                                 <span class="badge bg-success">Aktiv</span>
                             {% else %}
                                 <span class="badge bg-secondary">Inaktiv</span>
                             {% endif %}
                         </td>
-                        <td>
-                            <a href="{{ url_for('lieferanten_bearbeiten', id=lieferant.id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-pencil"></i> Bearbeiten
-                            </a>
-                            <form method="POST" action="{{ url_for('lieferanten_loeschen', id=lieferant.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diesen Lieferanten wirklich löschen?');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-trash"></i> Löschen
-                                </button>
-                            </form>
+                        <td data-label="Aktionen">
+                            <div class="d-flex gap-1 flex-wrap">
+                                <a href="{{ url_for('lieferanten_bearbeiten', id=lieferant.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Bearbeiten</span>
+                                </a>
+                                <form method="POST" action="{{ url_for('lieferanten_loeschen', id=lieferant.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diesen Lieferanten wirklich löschen?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

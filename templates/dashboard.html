@@ -4,28 +4,28 @@
 
 {% block content %}
 <!-- Kennzahlen -->
-<div class="row mb-4">
-    <div class="col-md-4 mb-3">
+<div class="row mb-4 g-3">
+    <div class="col-12 col-md-4">
         <div class="card stat-card einnahmen">
             <div class="card-body">
                 <h5 class="card-title text-muted">Einnahmen</h5>
-                <h2 class="text-success">{{ "%.2f"|format(einnahmen) }} €</h2>
+                <h2 class="text-success mb-0">{{ "%.2f"|format(einnahmen) }} €</h2>
             </div>
         </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-12 col-md-4">
         <div class="card stat-card ausgaben">
             <div class="card-body">
                 <h5 class="card-title text-muted">Ausgaben</h5>
-                <h2 class="text-danger">{{ "%.2f"|format(ausgaben) }} €</h2>
+                <h2 class="text-danger mb-0">{{ "%.2f"|format(ausgaben) }} €</h2>
             </div>
         </div>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-12 col-md-4">
         <div class="card stat-card gewinn">
             <div class="card-body">
                 <h5 class="card-title text-muted">Gewinn</h5>
-                <h2 class="{% if gewinn >= 0 %}text-success{% else %}text-danger{% endif %}">
+                <h2 class="mb-0 {% if gewinn >= 0 %}text-success{% else %}text-danger{% endif %}">
                     {{ "%.2f"|format(gewinn) }} €
                 </h2>
             </div>
@@ -41,7 +41,9 @@
                 <h5>Monatsübersicht {{ jahr }}</h5>
             </div>
             <div class="card-body">
-                <canvas id="monthlyChart" height="80"></canvas>
+                <div style="position: relative; height: 300px;">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -83,7 +85,7 @@
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             scales: {
                 y: {
                     beginAtZero: true,

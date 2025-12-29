@@ -3,14 +3,14 @@
 {% block page_title %}Lagerverwaltung{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>{{ aktuelles_lager.name }}</h3>
-    <div class="d-flex gap-2">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0">{{ aktuelles_lager.name }}</h3>
+    <div class="d-flex gap-2 flex-wrap">
         <a href="{{ url_for('artikel_neu', lager_id=aktuelles_lager.id) }}" class="btn btn-success">
-            <i class="bi bi-plus-circle"></i> Neuer Artikel
+            <i class="bi bi-plus-circle"></i> <span class="d-none d-md-inline">Neuer Artikel</span><span class="d-md-none">Artikel</span>
         </a>
         <a href="{{ url_for('lager_neu') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Neues Lager
+            <i class="bi bi-plus-circle"></i> <span class="d-none d-md-inline">Neues Lager</span><span class="d-md-none">Lager</span>
         </a>
     </div>
 </div>
@@ -40,31 +40,33 @@
                 <tbody>
                     {% for art in artikel %}
                     <tr class="{% if art.ist_niedrig() %}table-danger{% endif %}">
-                        <td><code>{{ art.artikelnummer }}</code></td>
-                        <td><strong>{{ art.name }}</strong></td>
-                        <td>{{ art.beschreibung or '-' }}</td>
-                        <td class="text-center">
+                        <td data-label="Artikelnummer"><code>{{ art.artikelnummer }}</code></td>
+                        <td data-label="Name"><strong>{{ art.name }}</strong></td>
+                        <td data-label="Beschreibung">{{ art.beschreibung or '-' }}</td>
+                        <td data-label="Bestand" class="text-center">
                             <span class="badge {% if art.ist_niedrig() %}bg-danger{% else %}bg-secondary{% endif %}">
                                 {{ art.bestand }} Stk
                             </span>
                         </td>
-                        <td class="text-center">{{ art.mindestbestand }} Stk</td>
-                        <td class="text-end">
+                        <td data-label="Mindestbestand" class="text-center">{{ art.mindestbestand }} Stk</td>
+                        <td data-label="Einkaufspreis" class="text-end">
                             {% if art.einkaufspreis %}
                                 {{ "%.2f"|format(art.einkaufspreis) }} €
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </td>
-                        <td>
-                            <a href="{{ url_for('artikel_bearbeiten', id=art.id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                            <form method="POST" action="{{ url_for('artikel_loeschen', id=art.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diesen Artikel wirklich löschen?');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
+                        <td data-label="Aktionen">
+                            <div class="d-flex gap-1">
+                                <a href="{{ url_for('artikel_bearbeiten', id=art.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="POST" action="{{ url_for('artikel_loeschen', id=art.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diesen Artikel wirklich löschen?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

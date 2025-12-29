@@ -3,10 +3,10 @@
 {% block page_title %}Ausgaben{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Ausgaben {{ jahr }}</h3>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0">Ausgaben {{ jahr }}</h3>
     <a href="{{ url_for('ausgaben_neu') }}" class="btn btn-danger">
-        <i class="bi bi-plus-circle"></i> Neue Ausgabe
+        <i class="bi bi-plus-circle"></i> <span class="d-none d-md-inline">Neue Ausgabe</span><span class="d-md-none">Neu</span>
     </a>
 </div>
 
@@ -46,11 +46,11 @@
                     <tbody>
                         {% for buchung in buchungen %}
                         <tr>
-                            <td style="white-space: nowrap;">{{ buchung.datum.strftime('%d.%m.%Y') }}</td>
-                            <td class="text-danger fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
-                            <td style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
-                            <td style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
-                            <td class="text-center align-middle" style="vertical-align: middle; padding: 0.75rem;">
+                            <td data-label="Datum" style="white-space: nowrap;">{{ buchung.datum.strftime('%d.%m.%Y') }}</td>
+                            <td data-label="Betrag" class="text-danger fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
+                            <td data-label="Titel" style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
+                            <td data-label="Rechnungsnummer" style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
+                            <td data-label="Von Zielkonto abgebucht" class="text-center align-middle" style="vertical-align: middle; padding: 0.75rem;">
                                 <input type="checkbox" 
                                        class="form-check-input zielkonto-checkbox" 
                                        id="zielkonto-{{ buchung.id }}"
@@ -58,14 +58,14 @@
                                        style="margin: 0 auto; display: block;"
                                        {% if buchung.von_zielkonto_abgebucht == True or buchung.von_zielkonto_abgebucht == 1 %}checked{% endif %}>
                             </td>
-                            <td style="white-space: nowrap;">
+                            <td data-label="Quelle" style="white-space: nowrap;">
                                 {% if buchung.quelle == 'Gmail' %}
                                     <span class="badge bg-info">Gmail</span>
                                 {% else %}
                                     <span class="badge bg-secondary">Manuell</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="PDF">
                                 {% if buchung.pdf_pfad %}
                                     <a href="{{ url_for('rechnungen', filename=buchung.pdf_pfad.split('/')[-1]) }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-file-pdf"></i>

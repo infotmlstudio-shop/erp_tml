@@ -3,10 +3,10 @@
 {% block page_title %}Benutzerverwaltung{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Benutzer</h3>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0">Benutzer</h3>
     <a href="{{ url_for('benutzer_neu') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> Neuer Benutzer
+        <i class="bi bi-plus-circle"></i> <span class="d-none d-md-inline">Neuer Benutzer</span><span class="d-md-none">Neu</span>
     </a>
 </div>
 
@@ -27,20 +27,20 @@
                 <tbody>
                     {% for user in benutzer_liste %}
                     <tr>
-                        <td>
+                        <td data-label="Benutzername">
                             <strong>{{ user.username }}</strong>
                             {% if user.username == 'admin' %}
                                 <span class="badge bg-warning text-dark ms-2">Admin</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Rolle">
                             {% if user.rolle %}
                                 <span class="badge bg-info">{{ user.rolle.name }}</span>
                             {% else %}
                                 <span class="text-muted">Keine Rolle</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="Status">
                             {% set user_data = benutzer_data|selectattr('id', 'equalto', user.id)|first %}
                             {% if user_data and user_data.aktiv %}
                                 <span class="badge bg-success">Aktiv</span>
@@ -48,18 +48,20 @@
                                 <span class="badge bg-secondary">Inaktiv</span>
                             {% endif %}
                         </td>
-                        <td>{{ user.created_at.strftime('%d.%m.%Y') }}</td>
-                        <td>
-                            <a href="{{ url_for('benutzer_bearbeiten', id=user.id) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-pencil"></i> Bearbeiten
-                            </a>
-                            {% if user.username != 'admin' and user.id != current_user.id %}
-                            <form method="POST" action="{{ url_for('benutzer_loeschen', id=user.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diesen Benutzer wirklich löschen?');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-trash"></i> Löschen
-                                </button>
-                            </form>
-                            {% endif %}
+                        <td data-label="Erstellt am">{{ user.created_at.strftime('%d.%m.%Y') }}</td>
+                        <td data-label="Aktionen">
+                            <div class="d-flex gap-1 flex-wrap">
+                                <a href="{{ url_for('benutzer_bearbeiten', id=user.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Bearbeiten</span>
+                                </a>
+                                {% if user.username != 'admin' and user.id != current_user.id %}
+                                <form method="POST" action="{{ url_for('benutzer_loeschen', id=user.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diesen Benutzer wirklich löschen?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

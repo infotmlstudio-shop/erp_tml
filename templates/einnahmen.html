@@ -3,10 +3,10 @@
 {% block page_title %}Einnahmen{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Einnahmen {{ jahr }}</h3>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0">Einnahmen {{ jahr }}</h3>
     <a href="{{ url_for('einnahmen_neu') }}" class="btn btn-success">
-        <i class="bi bi-plus-circle"></i> Neue Einnahme
+        <i class="bi bi-plus-circle"></i> <span class="d-none d-md-inline">Neue Einnahme</span><span class="d-md-none">Neu</span>
     </a>
 </div>
 
@@ -29,11 +29,11 @@
                     <tbody>
                     {% for buchung in buchungen %}
                     <tr>
-                        <td style="white-space: nowrap;">{{ buchung.datum.strftime('%d.%m.%Y') }}</td>
-                        <td class="text-success fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
-                        <td style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
-                        <td style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
-                        <td class="text-center align-middle ueberwiesen-am-cell" 
+                        <td data-label="Datum" style="white-space: nowrap;">{{ buchung.datum.strftime('%d.%m.%Y') }}</td>
+                        <td data-label="Betrag" class="text-success fw-bold" style="white-space: nowrap;">{{ "%.2f"|format(buchung.betrag) }} €</td>
+                        <td data-label="Titel" style="word-wrap: break-word; max-width: 0;">{{ buchung.titel or '-' }}</td>
+                        <td data-label="Rechnungsnummer" style="word-wrap: break-word; max-width: 0;">{{ buchung.rechnungsnummer or '-' }}</td>
+                        <td data-label="Überwiesen am" class="text-center align-middle ueberwiesen-am-cell" 
                             data-buchung-id="{{ buchung.id }}"
                             style="vertical-align: middle;">
                             <input type="date" 
@@ -42,14 +42,14 @@
                                    value="{{ buchung.ueberwiesen_am.strftime('%Y-%m-%d') if buchung.ueberwiesen_am else '' }}"
                                    style="width: 140px; margin: 0 auto; display: block;">
                         </td>
-                        <td style="white-space: nowrap;">
+                        <td data-label="Quelle" style="white-space: nowrap;">
                             {% if buchung.quelle == 'Gmail' %}
                                 <span class="badge bg-info">Gmail</span>
                             {% else %}
                                 <span class="badge bg-secondary">Manuell</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="PDF">
                             {% if buchung.pdf_pfad %}
                                 <a href="{{ url_for('rechnungen', filename=buchung.pdf_pfad.split('/')[-1]) }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-file-pdf"></i>
