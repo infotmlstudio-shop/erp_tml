@@ -127,36 +127,39 @@ class GmailService:
                     else:
                         print(f"  Fallback auch nicht gefunden: {fallback_creds}")
                         return
-                flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
-                
-                # Für Server-Umgebungen: Manueller OAuth-Flow
+                # Prüfe ob wir in einer Server/Web-Umgebung sind
+                # In Flask-Request-Kontext können wir keinen Browser öffnen
                 try:
-                    # Versuche Browser zu öffnen (funktioniert nur lokal)
+                    from flask import has_request_context
+                    is_server_env = has_request_context() or os.environ.get('SERVER_SOFTWARE') is not None
+                except:
+                    # Fallback: Prüfe ob DISPLAY gesetzt ist (für Linux)
+                    is_server_env = os.environ.get('DISPLAY') is None
+                
+                if is_server_env:
+                    # In Server-Umgebung kann kein Browser geöffnet werden
+                    # Token muss bereits vorhanden sein oder manuell erstellt werden
+                    error_msg = (
+                        f"Gmail OAuth-Token nicht gefunden.\n"
+                        f"Credentials: {credentials_path}\n"
+                        f"Token-Pfad: {token_path}\n"
+                        f"Bitte führen Sie 'python scripts/setup_gmail_auth.py' lokal aus."
+                    )
+                    logger.error(error_msg)
+                    raise Exception("Gmail OAuth-Token nicht gefunden. Bitte führen Sie die Authentifizierung lokal durch: 'python scripts/setup_gmail_auth.py'")
+                
+                # Lokale Umgebung: Versuche Browser zu öffnen
+                flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
+                try:
                     creds = flow.run_local_server(port=0)
                 except Exception as e:
-                    # Fallback: Manueller Flow für Server
-                    print("\n" + "="*60)
-                    print("Gmail OAuth-Authentifizierung erforderlich")
-                    print("="*60)
-                    print("\nBitte führen Sie die Authentifizierung lokal durch:")
-                    print("1. Kopieren Sie diese Datei auf Ihren lokalen Rechner:")
-                    print(f"   {credentials_path}")
-                    print("\n2. Führen Sie lokal aus:")
-                    print("   python3 -c \"")
-                    print("   from google_auth_oauthlib.flow import InstalledAppFlow;")
-                    print("   flow = InstalledAppFlow.from_client_secrets_file(")
-                    print(f"       '{credentials_path}',")
-                    print("       ['https://www.googleapis.com/auth/gmail.readonly']);")
-                    print("   creds = flow.run_local_server(port=0);")
-                    print("   import json;")
-                    print("   print(json.dumps(creds.to_json()))")
-                    print("   \"")
-                    print("\n3. Kopieren Sie den ausgegebenen JSON-String")
-                    print("4. Speichern Sie ihn in:")
-                    print(f"   {token_path}")
-                    print("\nODER verwenden Sie das Script: scripts/setup_gmail_auth.py")
-                    print("="*60)
-                    raise Exception("OAuth-Authentifizierung muss lokal durchgeführt werden. Siehe Anweisungen oben.")
+                    error_msg = (
+                        f"Fehler beim OAuth-Flow: {e}\n\n"
+                        "Bitte führen Sie die Authentifizierung manuell durch:\n"
+                        f"python scripts/setup_gmail_auth.py"
+                    )
+                    logger.error(error_msg)
+                    raise Exception("OAuth-Authentifizierung fehlgeschlagen. Bitte führen Sie 'python scripts/setup_gmail_auth.py' aus.")
             
             # Token speichern
             os.makedirs(os.path.dirname(token_path), exist_ok=True)
