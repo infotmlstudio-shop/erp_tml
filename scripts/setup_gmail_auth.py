@@ -33,8 +33,15 @@ def main():
     
     # Credentials-Pfad abfragen oder Standard verwenden
     print(f"Standard-Pfad: {default_credentials}")
-    credentials_path = input("Pfad zu gmail_credentials.json (Enter für Standard): ").strip()
-    if not credentials_path:
+    
+    # Versuche interaktive Eingabe, falls nicht möglich verwende Standard
+    try:
+        credentials_path = input("Pfad zu gmail_credentials.json (Enter für Standard): ").strip()
+        if not credentials_path:
+            credentials_path = default_credentials
+    except (EOFError, KeyboardInterrupt):
+        # Nicht-interaktiver Modus: Verwende Standard-Pfad
+        print("\n[INFO] Nicht-interaktiver Modus: Verwende Standard-Pfad")
         credentials_path = default_credentials
     
     if not os.path.exists(credentials_path):
