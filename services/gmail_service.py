@@ -99,25 +99,41 @@ class GmailService:
                 token_path = fallback_token
         
         # Token laden falls vorhanden
-        if os.path.exists(token_path):
+        token_exists = os.path.exists(token_path)
+        logger.info(f"Token-Datei existiert: {token_exists}, Pfad: {token_path}")
+        
+        if token_exists:
             try:
                 creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+                logger.info(f"Token geladen, gültig: {creds.valid if creds else False}, abgelaufen: {creds.expired if creds else False}")
             except Exception as e:
+                logger.error(f"Fehler beim Laden des Tokens: {e}")
                 print(f"Fehler beim Laden des Tokens: {e}")
                 creds = None
         else:
+            logger.warning(f"Token-Datei nicht gefunden: {token_path}")
             print(f"Token-Datei nicht gefunden: {token_path}")
             creds = None
         
         # Wenn keine gültigen Credentials vorhanden, OAuth-Flow starten
         if not creds or not creds.valid:
+            # Versuche Token zu refreshen falls abgelaufen
             if creds and creds.expired and creds.refresh_token:
                 try:
+                    logger.info("Token abgelaufen, versuche Refresh...")
                     creds.refresh(Request())
+                    logger.info("Token erfolgreich aktualisiert")
+                    # Aktualisiertes Token speichern
+                    os.makedirs(os.path.dirname(token_path), exist_ok=True)
+                    with open(token_path, 'w') as token:
+                        token.write(creds.to_json())
                 except Exception as e:
+                    logger.error(f"Fehler beim Token-Refresh: {e}")
                     print(f"Fehler beim Token-Refresh: {e}")
                     creds = None
-            else:
+            
+            # Wenn immer noch keine gültigen Credentials, neuen OAuth-Flow starten
+            if not creds or not creds.valid:
                 if not os.path.exists(credentials_path):
                     print(f"Warnung: Gmail-Credentials nicht gefunden: {credentials_path}")
                     # Prüfe nochmal Fallback
@@ -127,6 +143,7 @@ class GmailService:
                     else:
                         print(f"  Fallback auch nicht gefunden: {fallback_creds}")
                         return
+                
                 # Prüfe ob wir in einer Server/Web-Umgebung sind
                 # In Flask-Request-Kontext können wir keinen Browser öffnen
                 try:
@@ -139,14 +156,24 @@ class GmailService:
                 if is_server_env:
                     # In Server-Umgebung kann kein Browser geöffnet werden
                     # Token muss bereits vorhanden sein oder manuell erstellt werden
-                    error_msg = (
-                        f"Gmail OAuth-Token nicht gefunden.\n"
-                        f"Credentials: {credentials_path}\n"
-                        f"Token-Pfad: {token_path}\n"
-                        f"Bitte führen Sie 'python scripts/setup_gmail_auth.py' lokal aus."
-                    )
-                    logger.error(error_msg)
-                    raise Exception("Gmail OAuth-Token nicht gefunden. Bitte führen Sie die Authentifizierung lokal durch: 'python scripts/setup_gmail_auth.py'")
+                    if not token_exists:
+                        error_msg = (
+                            f"Gmail OAuth-Token nicht gefunden.\n"
+                            f"Credentials: {credentials_path}\n"
+                            f"Token-Pfad: {token_path}\n"
+                            f"Bitte führen Sie 'python scripts/setup_gmail_auth.py' lokal aus und kopieren Sie das Token auf den Server."
+                        )
+                        logger.error(error_msg)
+                        raise Exception("Gmail OAuth-Token nicht gefunden. Bitte führen Sie die Authentifizierung lokal durch: 'python scripts/setup_gmail_auth.py' und kopieren Sie das Token auf den Server.")
+                    else:
+                        # Token existiert, aber ist ungültig und konnte nicht refreshed werden
+                        error_msg = (
+                            f"Gmail OAuth-Token ist ungültig und konnte nicht aktualisiert werden.\n"
+                            f"Token-Pfad: {token_path}\n"
+                            f"Bitte erstellen Sie ein neues Token mit 'python scripts/setup_gmail_auth.py' und kopieren Sie es auf den Server."
+                        )
+                        logger.error(error_msg)
+                        raise Exception("Gmail OAuth-Token ist ungültig. Bitte erstellen Sie ein neues Token mit 'python scripts/setup_gmail_auth.py' und kopieren Sie es auf den Server.")
                 
                 # Lokale Umgebung: Versuche Browser zu öffnen
                 flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
