@@ -11,7 +11,7 @@ import json
 try:
     from google_auth_oauthlib.flow import InstalledAppFlow
 except ImportError:
-    print("❌ google-auth-oauthlib nicht installiert!")
+    print("[FEHLER] google-auth-oauthlib nicht installiert!")
     print("Installieren Sie es mit: pip install google-auth-oauthlib")
     sys.exit(1)
 
@@ -23,50 +23,52 @@ def main():
     print("="*60)
     print()
     
-    # Credentials-Pfad abfragen
-    credentials_path = input("Pfad zu gmail_credentials.json: ").strip()
+    # Projekt-Root finden (wo app.py liegt)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    
+    # Standard-Pfade
+    default_credentials = os.path.join(project_root, "credentials", "gmail_credentials.json")
+    default_token = os.path.join(project_root, "credentials", "gmail_token.json")
+    
+    # Credentials-Pfad abfragen oder Standard verwenden
+    print(f"Standard-Pfad: {default_credentials}")
+    credentials_path = input("Pfad zu gmail_credentials.json (Enter für Standard): ").strip()
     if not credentials_path:
-        credentials_path = "credentials/gmail_credentials.json"
+        credentials_path = default_credentials
     
     if not os.path.exists(credentials_path):
-        print(f"❌ Datei nicht gefunden: {credentials_path}")
+        print(f"[FEHLER] Datei nicht gefunden: {credentials_path}")
         sys.exit(1)
+    
+    # Token-Pfad bestimmen
+    token_path = default_token
+    print(f"\nToken wird gespeichert in: {token_path}")
     
     # OAuth-Flow starten
     try:
         flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
-        print("\n🔐 Browser öffnet sich für Authentifizierung...")
+        print("\n[INFO] Browser oeffnet sich fuer Authentifizierung...")
+        print("Bitte folgen Sie den Anweisungen im Browser.")
         creds = flow.run_local_server(port=0)
         
-        # Token als JSON ausgeben
-        token_json = creds.to_json()
+        # Token speichern
+        os.makedirs(os.path.dirname(token_path), exist_ok=True)
+        with open(token_path, 'w') as f:
+            f.write(creds.to_json())
         
         print("\n" + "="*60)
-        print("✅ Authentifizierung erfolgreich!")
+        print("[ERFOLG] Authentifizierung erfolgreich!")
         print("="*60)
-        print("\nToken (kopieren und auf Server speichern):")
-        print("-"*60)
-        print(token_json)
-        print("-"*60)
-        
-        # Optional: Direkt speichern
-        save = input("\nToken lokal speichern? (j/n): ").strip().lower()
-        if save == 'j':
-            token_path = input("Pfad (Enter für credentials/gmail_token.json): ").strip()
-            if not token_path:
-                token_path = "credentials/gmail_token.json"
-            
-            os.makedirs(os.path.dirname(token_path), exist_ok=True)
-            with open(token_path, 'w') as f:
-                f.write(token_json)
-            print(f"✅ Token gespeichert: {token_path}")
-            print("\n📋 Kopieren Sie diese Datei auf den Server:")
-            print(f"   scp {token_path} benutzer@server:/opt/erp_tml/credentials/gmail_token.json")
+        print(f"\n[OK] Token gespeichert: {token_path}")
+        print("\nSie koennen jetzt die Gmail-Synchronisation verwenden.")
         
         return 0
         
     except Exception as e:
-        print(f"\n❌ Fehler: {e}")
+        print(f"\n[FEHLER] Fehler: {e}")
+        import traceback
+        traceback.print_exc()
         return 1
 
 if __name__ == '__main__':
