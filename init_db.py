@@ -12,6 +12,22 @@ if __name__ == '__main__':
         db.create_all()
         print("✓ Datenbank erstellt")
         
+        # Migration für bestehende Datenbanken
+        try:
+            from sqlalchemy import text
+            # Prüfe ob kunde_id Spalte fehlt
+            result = db.session.execute(text("PRAGMA table_info(auftrag)"))
+            columns = [row[1] for row in result]
+            
+            if 'kunde_id' not in columns:
+                print("Führe Migration aus: Füge kunde_id Spalte hinzu...")
+                db.session.execute(text("ALTER TABLE auftrag ADD COLUMN kunde_id INTEGER"))
+                db.session.commit()
+                print("✓ Migration: kunde_id Spalte hinzugefügt")
+        except Exception as e:
+            print(f"⚠️  Migration-Warnung: {e}")
+            # Ignoriere Fehler, falls Tabelle noch nicht existiert
+        
         # Standard-Admin-Benutzer erstellen (falls nicht vorhanden)
         if User.query.count() == 0:
             admin = User(username='admin')
