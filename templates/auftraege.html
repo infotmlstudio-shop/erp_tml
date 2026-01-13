@@ -37,7 +37,9 @@
                 <h5 class="card-title">{{ auftrag.titel }}</h5>
                 <p class="card-text text-muted small mb-2">
                     <strong>Nr.:</strong> {{ auftrag.auftragsnummer }}<br>
-                    {% if auftrag.kunde %}
+                    {% if auftrag.kunde_obj %}
+                    <strong>Kunde:</strong> {{ auftrag.kunde_obj.name }}{% if auftrag.kunde_obj.firma %} ({{ auftrag.kunde_obj.firma }}){% endif %}<br>
+                    {% elif auftrag.kunde %}
                     <strong>Kunde:</strong> {{ auftrag.kunde }}<br>
                     {% endif %}
                     {% if auftrag.zugewiesen_an %}

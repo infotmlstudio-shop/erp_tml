@@ -1006,20 +1006,37 @@ def rollen_loeschen(id):
 @login_required
 def auftraege():
     """Aufträge-Übersicht"""
-    if not current_user.hat_berechtigung('auftraege'):
-        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+    try:
+        # Admin hat immer Zugriff
+        if current_user.username != 'admin' and not current_user.hat_berechtigung('auftraege'):
+            flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+            return redirect(url_for('index'))
+        
+        status_filter = request.args.get('status', 'alle')
+        
+        try:
+            query = Auftrag.query
+            
+            if status_filter != 'alle':
+                query = query.filter(Auftrag.status == status_filter)
+            
+            auftraege = query.order_by(Auftrag.created_at.desc()).all()
+        except Exception as e:
+            app.logger.error(f"Fehler beim Abrufen der Aufträge: {e}")
+            import traceback
+            app.logger.error(traceback.format_exc())
+            flash('Fehler beim Laden der Aufträge. Bitte stellen Sie sicher, dass die Datenbank aktualisiert wurde.', 'error')
+            auftraege = []
+        
+        benutzer = User.query.filter(User.aktiv == True).all()
+        
+        return render_template('auftraege.html', auftraege=auftraege, benutzer=benutzer, status_filter=status_filter)
+    except Exception as e:
+        app.logger.error(f"Fehler in auftraege(): {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
+        flash(f'Fehler beim Laden der Seite: {str(e)}. Bitte prüfen Sie die Server-Logs.', 'error')
         return redirect(url_for('index'))
-    
-    status_filter = request.args.get('status', 'alle')
-    query = Auftrag.query
-    
-    if status_filter != 'alle':
-        query = query.filter(Auftrag.status == status_filter)
-    
-    auftraege = query.order_by(Auftrag.created_at.desc()).all()
-    benutzer = User.query.filter(User.aktiv == True).all()
-    
-    return render_template('auftraege.html', auftraege=auftraege, benutzer=benutzer, status_filter=status_filter)
 
 @app.route('/auftraege/neu', methods=['GET', 'POST'])
 @login_required
