@@ -11,6 +11,35 @@
             min-height: 100vh;
             background-color: #f8f9fa;
         }
+        /* Dropdown in Sidebar */
+        .sidebar .dropdown-menu {
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-left: 0.5rem;
+            margin-top: 0.25rem;
+        }
+        .sidebar .dropdown-item {
+            padding: 0.5rem 1rem;
+            color: #495057;
+        }
+        .sidebar .dropdown-item:hover,
+        .sidebar .dropdown-item.active {
+            background-color: #e9ecef;
+            color: #000;
+        }
+        .sidebar .dropdown-item i {
+            margin-right: 0.5rem;
+            width: 1.2em;
+        }
+        .sidebar .dropdown-toggle::after {
+            margin-left: auto;
+        }
+        .sidebar .nav-link.dropdown-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
         .main-content {
             padding: 20px;
         }
@@ -29,6 +58,18 @@
             .sidebar .nav-link {
                 padding: 0.5rem 0.75rem;
                 font-size: 0.95rem;
+            }
+            .sidebar .dropdown-menu {
+                position: static !important;
+                transform: none !important;
+                border: none;
+                box-shadow: none;
+                background-color: transparent;
+                padding-left: 1rem;
+            }
+            .sidebar .dropdown-item {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
             }
             h2 {
                 font-size: 1.5rem;
@@ -272,31 +313,47 @@
                     </button>
                 </div>
                 <ul class="nav flex-column">
+                    <!-- Buchhaltung Dropdown -->
                     <li class="nav-item mb-2">
-                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}" onclick="closeSidebarOnMobile()">
-                            <i class="bi bi-speedometer2"></i> Dashboard
-                        </a>
+                        {% set is_buchhaltung_active = request.endpoint in ['index', 'einnahmen', 'einnahmen_neu', 'ausgaben', 'ausgaben_neu'] or 'lieferanten' in request.endpoint %}
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle {% if is_buchhaltung_active %}active{% endif %}" href="#" role="button" id="buchhaltungDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-calculator"></i> Buchhaltung
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="buchhaltungDropdown">
+                                <li>
+                                    <a class="dropdown-item {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}" onclick="closeSidebarOnMobile()">
+                                        <i class="bi bi-speedometer2"></i> Dashboard
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item {% if request.endpoint == 'einnahmen' or request.endpoint == 'einnahmen_neu' %}active{% endif %}" href="{{ url_for('einnahmen') }}" onclick="closeSidebarOnMobile()">
+                                        <i class="bi bi-arrow-down-circle"></i> Einnahmen
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item {% if request.endpoint == 'ausgaben' or request.endpoint == 'ausgaben_neu' %}active{% endif %}" href="{{ url_for('ausgaben') }}" onclick="closeSidebarOnMobile()">
+                                        <i class="bi bi-arrow-up-circle"></i> Ausgaben
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item {% if 'lieferanten' in request.endpoint %}active{% endif %}" href="{{ url_for('lieferanten') }}" onclick="closeSidebarOnMobile()">
+                                        <i class="bi bi-people"></i> Lieferanten
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </li>
-                    <li class="nav-item mb-2">
-                        <a class="nav-link {% if request.endpoint == 'einnahmen' or request.endpoint == 'einnahmen_neu' %}active{% endif %}" href="{{ url_for('einnahmen') }}" onclick="closeSidebarOnMobile()">
-                            <i class="bi bi-arrow-down-circle"></i> Einnahmen
-                        </a>
-                    </li>
-                    <li class="nav-item mb-2">
-                        <a class="nav-link {% if request.endpoint == 'ausgaben' or request.endpoint == 'ausgaben_neu' %}active{% endif %}" href="{{ url_for('ausgaben') }}" onclick="closeSidebarOnMobile()">
-                            <i class="bi bi-arrow-up-circle"></i> Ausgaben
-                        </a>
-                    </li>
-                    <li class="nav-item mb-2">
-                        <a class="nav-link {% if 'lieferanten' in request.endpoint %}active{% endif %}" href="{{ url_for('lieferanten') }}" onclick="closeSidebarOnMobile()">
-                            <i class="bi bi-people"></i> Lieferanten
-                        </a>
-                    </li>
+                    
+                    <!-- Lager -->
                     <li class="nav-item mb-2">
                         <a class="nav-link {% if 'lager' in request.endpoint or 'artikel' in request.endpoint %}active{% endif %}" href="{{ url_for('lager') }}" onclick="closeSidebarOnMobile()">
                             <i class="bi bi-box-seam"></i> Lager
                         </a>
                     </li>
+                    
+                    <!-- Benutzer & Rollen -->
                     {% if current_user.hat_berechtigung('benutzer') %}
                     <li class="nav-item mb-2">
                         <a class="nav-link {% if 'benutzer' in request.endpoint or 'rollen' in request.endpoint %}active{% endif %}" href="{{ url_for('benutzer') }}" onclick="closeSidebarOnMobile()">
@@ -304,6 +361,8 @@
                         </a>
                     </li>
                     {% endif %}
+                    
+                    <!-- Abmelden -->
                     <li class="nav-item mt-4">
                         <a class="nav-link text-danger" href="{{ url_for('logout') }}" onclick="closeSidebarOnMobile()">
                             <i class="bi bi-box-arrow-right"></i> Abmelden
