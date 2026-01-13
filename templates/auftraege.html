@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block page_title %}Aufträge{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0 flex-grow-1">Aufträge</h3>
+    <a href="{{ url_for('auftrag_neu') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> <span class="d-none d-md-inline">Neuer Auftrag</span><span class="d-md-none">Neu</span>
+    </a>
+</div>
+
+<!-- Status-Filter -->
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <a href="{{ url_for('auftraege', status='alle') }}" class="btn btn-outline-secondary {% if status_filter == 'alle' %}active{% endif %}">Alle</a>
+        <a href="{{ url_for('auftraege', status='offen') }}" class="btn btn-outline-secondary {% if status_filter == 'offen' %}active{% endif %}">Offen</a>
+        <a href="{{ url_for('auftraege', status='in_arbeit') }}" class="btn btn-outline-secondary {% if status_filter == 'in_arbeit' %}active{% endif %}">In Arbeit</a>
+        <a href="{{ url_for('auftraege', status='abgeschlossen') }}" class="btn btn-outline-secondary {% if status_filter == 'abgeschlossen' %}active{% endif %}">Abgeschlossen</a>
+    </div>
+</div>
+
+{% if auftraege %}
+<div class="row">
+    {% for auftrag in auftraege %}
+    <div class="col-md-6 col-lg-4 mb-3">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="badge bg-{{ {'offen': 'secondary', 'in_arbeit': 'primary', 'abgeschlossen': 'success', 'storniert': 'danger'}.get(auftrag.status, 'secondary') }}">
+                    {{ auftrag.status.replace('_', ' ').title() }}
+                </span>
+                <span class="badge bg-{{ {'niedrig': 'info', 'normal': 'primary', 'hoch': 'warning', 'dringend': 'danger'}.get(auftrag.prioritaet, 'secondary') }}">
+                    {{ auftrag.prioritaet.title() }}
+                </span>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ auftrag.titel }}</h5>
+                <p class="card-text text-muted small mb-2">
+                    <strong>Nr.:</strong> {{ auftrag.auftragsnummer }}<br>
+                    {% if auftrag.kunde %}
+                    <strong>Kunde:</strong> {{ auftrag.kunde }}<br>
+                    {% endif %}
+                    {% if auftrag.zugewiesen_an %}
+                    <strong>Zugewiesen:</strong> {{ auftrag.zugewiesen_an.username }}<br>
+                    {% endif %}
+                </p>
+                {% if auftrag.beschreibung %}
+                <p class="card-text small">{{ auftrag.beschreibung[:100] }}{% if auftrag.beschreibung|length > 100 %}...{% endif %}</p>
+                {% endif %}
+                
+                <!-- Fortschritt -->
+                {% set fortschritt = auftrag.get_fortschritt() %}
+                {% if auftrag.todos %}
+                <div class="mb-2">
+                    <small class="text-muted">Fortschritt: {{ fortschritt }}%</small>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ fortschritt }}%"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        {% if auftrag.startdatum %}
+                        <i class="bi bi-calendar"></i> {{ auftrag.startdatum.strftime('%d.%m.%Y') }}
+                        {% endif %}
+                    </small>
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('auftrag_bearbeiten', id=auftrag.id) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Bearbeiten</span>
+                        </a>
+                        <a href="{{ url_for('auftragsplanung') }}" class="btn btn-outline-info">
+                            <i class="bi bi-calendar-event"></i> <span class="d-none d-md-inline">Planung</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Keine Aufträge gefunden.
+</div>
+{% endif %}
+{% endblock %}
+

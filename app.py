@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Lieferant, Buchung, Lager, Artikel, Rolle
+from models import db, User, Lieferant, Buchung, Lager, Artikel, Rolle, Auftrag, Todo
 from config import Config
 from datetime import datetime, date
 from decimal import Decimal
@@ -999,6 +999,270 @@ def rollen_loeschen(id):
     db.session.commit()
     flash('Rolle erfolgreich gelöscht.', 'success')
     return redirect(url_for('rollen'))
+
+# ==================== Auftragsmanagement ====================
+
+@app.route('/auftraege')
+@login_required
+def auftraege():
+    """Aufträge-Übersicht"""
+    if not current_user.hat_berechtigung('auftraege'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    status_filter = request.args.get('status', 'alle')
+    query = Auftrag.query
+    
+    if status_filter != 'alle':
+        query = query.filter(Auftrag.status == status_filter)
+    
+    auftraege = query.order_by(Auftrag.created_at.desc()).all()
+    benutzer = User.query.filter(User.aktiv == True).all()
+    
+    return render_template('auftraege.html', auftraege=auftraege, benutzer=benutzer, status_filter=status_filter)
+
+@app.route('/auftraege/neu', methods=['GET', 'POST'])
+@login_required
+def auftrag_neu():
+    """Neuen Auftrag erstellen"""
+    if not current_user.hat_berechtigung('auftraege'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        try:
+            # Auftragsnummer generieren
+            last_auftrag = Auftrag.query.order_by(Auftrag.id.desc()).first()
+            if last_auftrag:
+                try:
+                    last_num = int(last_auftrag.auftragsnummer.split('-')[-1]) if '-' in last_auftrag.auftragsnummer else 0
+                except:
+                    last_num = 0
+            else:
+                last_num = 0
+            auftragsnummer = f"AUF-{datetime.now().year}-{str(last_num + 1).zfill(4)}"
+            
+            auftrag = Auftrag(
+                auftragsnummer=auftragsnummer,
+                titel=request.form.get('titel'),
+                beschreibung=request.form.get('beschreibung', ''),
+                kunde=request.form.get('kunde', ''),
+                status=request.form.get('status', 'offen'),
+                prioritaet=request.form.get('prioritaet', 'normal'),
+                erstellt_von_id=current_user.id,
+                zugewiesen_an_id=request.form.get('zugewiesen_an_id') or None
+            )
+            
+            # Datum setzen falls vorhanden
+            if request.form.get('startdatum'):
+                auftrag.startdatum = datetime.strptime(request.form.get('startdatum'), '%Y-%m-%d').date()
+            if request.form.get('enddatum'):
+                auftrag.enddatum = datetime.strptime(request.form.get('enddatum'), '%Y-%m-%d').date()
+            
+            db.session.add(auftrag)
+            db.session.commit()
+            
+            flash('Auftrag erfolgreich erstellt.', 'success')
+            return redirect(url_for('auftrag_bearbeiten', id=auftrag.id))
+        except Exception as e:
+            app.logger.error(f"Fehler beim Erstellen des Auftrags: {e}")
+            flash(f'Fehler beim Erstellen des Auftrags: {str(e)}', 'error')
+    
+    benutzer = User.query.filter(User.aktiv == True).all()
+    return render_template('auftrag_form.html', auftrag=None, benutzer=benutzer)
+
+@app.route('/auftraege/<int:id>', methods=['GET', 'POST'])
+@login_required
+def auftrag_bearbeiten(id):
+    """Auftrag bearbeiten"""
+    if not current_user.hat_berechtigung('auftraege'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    auftrag = Auftrag.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        try:
+            auftrag.titel = request.form.get('titel')
+            auftrag.beschreibung = request.form.get('beschreibung', '')
+            auftrag.kunde = request.form.get('kunde', '')
+            auftrag.status = request.form.get('status', 'offen')
+            auftrag.prioritaet = request.form.get('prioritaet', 'normal')
+            auftrag.zugewiesen_an_id = request.form.get('zugewiesen_an_id') or None
+            
+            if request.form.get('startdatum'):
+                auftrag.startdatum = datetime.strptime(request.form.get('startdatum'), '%Y-%m-%d').date()
+            else:
+                auftrag.startdatum = None
+                
+            if request.form.get('enddatum'):
+                auftrag.enddatum = datetime.strptime(request.form.get('enddatum'), '%Y-%m-%d').date()
+            else:
+                auftrag.enddatum = None
+            
+            db.session.commit()
+            flash('Auftrag erfolgreich aktualisiert.', 'success')
+            return redirect(url_for('auftrag_bearbeiten', id=auftrag.id))
+        except Exception as e:
+            app.logger.error(f"Fehler beim Aktualisieren des Auftrags: {e}")
+            flash(f'Fehler beim Aktualisieren des Auftrags: {str(e)}', 'error')
+    
+    benutzer = User.query.filter(User.aktiv == True).all()
+    return render_template('auftrag_form.html', auftrag=auftrag, benutzer=benutzer)
+
+@app.route('/auftraege/<int:id>/loeschen', methods=['POST'])
+@login_required
+def auftrag_loeschen(id):
+    """Auftrag löschen"""
+    if not current_user.hat_berechtigung('auftraege'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    auftrag = Auftrag.query.get_or_404(id)
+    db.session.delete(auftrag)
+    db.session.commit()
+    flash('Auftrag erfolgreich gelöscht.', 'success')
+    return redirect(url_for('auftraege'))
+
+@app.route('/auftraege/<int:id>/todo/neu', methods=['POST'])
+@login_required
+def todo_neu(id):
+    """Neues Todo für Auftrag erstellen"""
+    if not current_user.hat_berechtigung('auftraege'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    
+    auftrag = Auftrag.query.get_or_404(id)
+    
+    # Position bestimmen
+    max_position = db.session.query(db.func.max(Todo.position)).filter_by(auftrag_id=id).scalar() or 0
+    
+    todo = Todo(
+        auftrag_id=id,
+        titel=request.form.get('titel'),
+        beschreibung=request.form.get('beschreibung', ''),
+        position=max_position + 1,
+        zugewiesen_an_id=request.form.get('zugewiesen_an_id') or None
+    )
+    
+    if request.form.get('faellig_am'):
+        todo.faellig_am = datetime.strptime(request.form.get('faellig_am'), '%Y-%m-%d').date()
+    
+    db.session.add(todo)
+    db.session.commit()
+    
+    return jsonify({
+        'id': todo.id,
+        'titel': todo.titel,
+        'erledigt': todo.erledigt,
+        'position': todo.position
+    })
+
+@app.route('/auftraege/todo/<int:id>/toggle', methods=['POST'])
+@login_required
+def todo_toggle(id):
+    """Todo als erledigt/unerledigt markieren"""
+    if not current_user.hat_berechtigung('auftraege'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    
+    todo = Todo.query.get_or_404(id)
+    todo.erledigt = not todo.erledigt
+    db.session.commit()
+    
+    return jsonify({'erledigt': todo.erledigt})
+
+@app.route('/auftraege/todo/<int:id>/loeschen', methods=['POST'])
+@login_required
+def todo_loeschen(id):
+    """Todo löschen"""
+    if not current_user.hat_berechtigung('auftraege'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    
+    todo = Todo.query.get_or_404(id)
+    db.session.delete(todo)
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+@app.route('/auftraege/todo/<int:id>/position', methods=['POST'])
+@login_required
+def todo_position(id):
+    """Todo-Position aktualisieren"""
+    if not current_user.hat_berechtigung('auftraege'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    
+    todo = Todo.query.get_or_404(id)
+    neue_position = request.json.get('position', todo.position)
+    todo.position = neue_position
+    db.session.commit()
+    
+    return jsonify({'success': True, 'position': todo.position})
+
+@app.route('/auftragsplanung')
+@login_required
+def auftragsplanung():
+    """Auftragsplanung mit Kalender"""
+    if not current_user.hat_berechtigung('auftraege'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    auftraege = Auftrag.query.filter(
+        Auftrag.startdatum.isnot(None)
+    ).all()
+    
+    return render_template('auftragsplanung.html', auftraege=auftraege)
+
+@app.route('/api/auftraege/kalender')
+@login_required
+def auftraege_kalender_api():
+    """API-Endpoint für Kalender-Events"""
+    if not current_user.hat_berechtigung('auftraege'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    
+    auftraege = Auftrag.query.filter(
+        Auftrag.startdatum.isnot(None)
+    ).all()
+    
+    events = []
+    for auftrag in auftraege:
+        events.append({
+            'id': auftrag.id,
+            'title': auftrag.titel,
+            'start': auftrag.startdatum.isoformat() if auftrag.startdatum else None,
+            'end': auftrag.enddatum.isoformat() if auftrag.enddatum else None,
+            'color': {
+                'offen': '#6c757d',
+                'in_arbeit': '#0d6efd',
+                'abgeschlossen': '#198754',
+                'storniert': '#dc3545'
+            }.get(auftrag.status, '#6c757d'),
+            'extendedProps': {
+                'auftragsnummer': auftrag.auftragsnummer,
+                'status': auftrag.status,
+                'prioritaet': auftrag.prioritaet
+            }
+        })
+    
+    return jsonify(events)
+
+@app.route('/api/auftraege/<int:id>/datum', methods=['PUT'])
+@login_required
+def auftrag_datum_update(id):
+    """Auftragsdatum per Drag & Drop aktualisieren"""
+    if not current_user.hat_berechtigung('auftraege'):
+        return jsonify({'error': 'Keine Berechtigung'}), 403
+    
+    auftrag = Auftrag.query.get_or_404(id)
+    data = request.json
+    
+    if 'start' in data:
+        auftrag.startdatum = datetime.strptime(data['start'], '%Y-%m-%d').date()
+    
+    if 'end' in data:
+        auftrag.enddatum = datetime.strptime(data['end'], '%Y-%m-%d').date()
+    
+    db.session.commit()
+    
+    return jsonify({'success': True})
 
 # Initialisierung
 def init_db():

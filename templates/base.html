@@ -346,6 +346,28 @@
                         </div>
                     </li>
                     
+                    <!-- Auftragsmanagement Dropdown -->
+                    <li class="nav-item mb-2">
+                        {% set is_auftrag_active = 'auftrag' in request.endpoint %}
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle {% if is_auftrag_active %}active{% endif %}" href="#" role="button" id="auftragDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-briefcase"></i> Auftragsmanagement
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="auftragDropdown">
+                                <li>
+                                    <a class="dropdown-item {% if request.endpoint == 'auftraege' or request.endpoint == 'auftrag_neu' or request.endpoint == 'auftrag_bearbeiten' %}active{% endif %}" href="{{ url_for('auftraege') }}" onclick="closeSidebarOnMobile()">
+                                        <i class="bi bi-list-ul"></i> Aufträge
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item {% if request.endpoint == 'auftragsplanung' %}active{% endif %}" href="{{ url_for('auftragsplanung') }}" onclick="closeSidebarOnMobile()">
+                                        <i class="bi bi-calendar-event"></i> Auftragsplanung
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    
                     <!-- Lager -->
                     <li class="nav-item mb-2">
                         <a class="nav-link {% if 'lager' in request.endpoint or 'artikel' in request.endpoint %}active{% endif %}" href="{{ url_for('lager') }}" onclick="closeSidebarOnMobile()">

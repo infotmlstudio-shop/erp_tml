@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block page_title %}Auftragsplanung{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<style>
+    #calendar {
+        max-width: 100%;
+        margin: 0 auto;
+        background-color: #fff;
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+    .fc-event {
+        cursor: move;
+    }
+    .fc-event:hover {
+        opacity: 0.8;
+    }
+    .fc-toolbar-title {
+        font-size: 1.5rem;
+    }
+    @media (max-width: 768px) {
+        .fc-toolbar {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .fc-toolbar-title {
+            font-size: 1.2rem;
+        }
+        .fc-button {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.85rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0 flex-grow-1">Auftragsplanung</h3>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('auftraege') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> <span class="d-none d-md-inline">Zurück zu Aufträgen</span><span class="d-md-none">Zurück</span>
+        </a>
+        <a href="{{ url_for('auftrag_neu') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> <span class="d-none d-md-inline">Neuer Auftrag</span><span class="d-md-none">Neu</span>
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<!-- Legende -->
+<div class="card mt-3">
+    <div class="card-body">
+        <h6>Legende</h6>
+        <div class="d-flex flex-wrap gap-3">
+            <span><span class="badge bg-secondary">Offen</span></span>
+            <span><span class="badge bg-primary">In Arbeit</span></span>
+            <span><span class="badge bg-success">Abgeschlossen</span></span>
+            <span><span class="badge bg-danger">Storniert</span></span>
+        </div>
+        <small class="text-muted d-block mt-2">
+            <i class="bi bi-info-circle"></i> Sie können Aufträge per Drag & Drop im Kalender verschieben, um Start- und Enddatum zu ändern.
+        </small>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendar');
+    
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'de',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        },
+        events: '{{ url_for("auftraege_kalender_api") }}',
+        editable: true,
+        droppable: false,
+        eventDrop: function(info) {
+            // Event wurde verschoben - Datum aktualisieren
+            const event = info.event;
+            const start = event.start;
+            const end = event.end || start;
+            
+            fetch('{{ url_for("auftrag_datum_update", id=0) }}'.replace('0', event.id), {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    start: start.toISOString().split('T')[0],
+                    end: end.toISOString().split('T')[0]
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Erfolgreich aktualisiert
+                } else {
+                    // Fehler - Event zurücksetzen
+                    info.revert();
+                    alert('Fehler beim Aktualisieren des Datums.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                info.revert();
+                alert('Fehler beim Aktualisieren des Datums.');
+            });
+        },
+        eventResize: function(info) {
+            // Event wurde in der Größe geändert - Enddatum aktualisieren
+            const event = info.event;
+            const end = event.end;
+            
+            fetch('{{ url_for("auftrag_datum_update", id=0) }}'.replace('0', event.id), {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    end: end.toISOString().split('T')[0]
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    info.revert();
+                    alert('Fehler beim Aktualisieren des Datums.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                info.revert();
+                alert('Fehler beim Aktualisieren des Datums.');
+            });
+        },
+        eventClick: function(info) {
+            // Event anklicken - zu Auftrag bearbeiten
+            window.location.href = '{{ url_for("auftrag_bearbeiten", id=0) }}'.replace('0', info.event.id);
+        },
+        eventDidMount: function(info) {
+            // Tooltip hinzufügen
+            info.el.setAttribute('title', info.event.extendedProps.auftragsnummer + ': ' + info.event.title);
+        }
+    });
+    
+    calendar.render();
+});
+</script>
+{% endblock %}
+

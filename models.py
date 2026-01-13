@@ -146,3 +146,54 @@ class Artikel(db.Model):
         """Prüft ob Bestand unter Mindestbestand ist"""
         return self.bestand <= self.mindestbestand
 
+
+class Auftrag(db.Model):
+    """Auftrag-Modell"""
+    id = db.Column(db.Integer, primary_key=True)
+    auftragsnummer = db.Column(db.String(50), unique=True, nullable=False)
+    titel = db.Column(db.String(200), nullable=False)
+    beschreibung = db.Column(db.Text, nullable=True)
+    kunde = db.Column(db.String(200), nullable=True)
+    status = db.Column(db.String(20), default='offen', nullable=False)  # offen, in_arbeit, abgeschlossen, storniert
+    startdatum = db.Column(db.Date, nullable=True)  # Für Kalender-Planung
+    enddatum = db.Column(db.Date, nullable=True)  # Für Kalender-Planung
+    prioritaet = db.Column(db.String(20), default='normal', nullable=False)  # niedrig, normal, hoch, dringend
+    erstellt_von_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    zugewiesen_an_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Beziehungen
+    erstellt_von = db.relationship('User', foreign_keys=[erstellt_von_id], backref='erstellte_auftraege')
+    zugewiesen_an = db.relationship('User', foreign_keys=[zugewiesen_an_id], backref='zugewiesene_auftraege')
+    todos = db.relationship('Todo', backref='auftrag', lazy=True, cascade='all, delete-orphan', order_by='Todo.position')
+    
+    def __repr__(self):
+        return f'<Auftrag {self.auftragsnummer} {self.titel}>'
+    
+    def get_fortschritt(self):
+        """Berechnet Fortschritt basierend auf erledigten Todos"""
+        if not self.todos:
+            return 0
+        erledigt = sum(1 for todo in self.todos if todo.erledigt)
+        return int((erledigt / len(self.todos)) * 100) if self.todos else 0
+
+
+class Todo(db.Model):
+    """Todo-Modell für Aufträge"""
+    id = db.Column(db.Integer, primary_key=True)
+    auftrag_id = db.Column(db.Integer, db.ForeignKey('auftrag.id'), nullable=False)
+    titel = db.Column(db.String(200), nullable=False)
+    beschreibung = db.Column(db.Text, nullable=True)
+    erledigt = db.Column(db.Boolean, default=False, nullable=False)
+    position = db.Column(db.Integer, default=0, nullable=False)  # Für Sortierung
+    faellig_am = db.Column(db.Date, nullable=True)
+    zugewiesen_an_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Beziehung
+    zugewiesen_an = db.relationship('User', foreign_keys=[zugewiesen_an_id], backref='zugewiesene_todos')
+    
+    def __repr__(self):
+        return f'<Todo {self.titel} für Auftrag {self.auftrag_id}>'
