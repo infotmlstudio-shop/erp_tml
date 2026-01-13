@@ -110,6 +110,7 @@
                 </form>
                 
                 <div id="todoList">
+                    {% if auftrag.todos %}
                     {% for todo in auftrag.todos|sort(attribute='position') %}
                     <div class="d-flex align-items-center mb-2 p-2 border rounded" data-todo-id="{{ todo.id }}">
                         <input type="checkbox" class="form-check-input me-2 todo-checkbox" {% if todo.erledigt %}checked{% endif %} data-todo-id="{{ todo.id }}">
@@ -119,6 +120,9 @@
                         </button>
                     </div>
                     {% endfor %}
+                    {% else %}
+                    <p class="text-muted small">Noch keine ToDos vorhanden.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

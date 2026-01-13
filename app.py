@@ -1079,7 +1079,12 @@ def auftrag_bearbeiten(id):
         flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
         return redirect(url_for('index'))
     
-    auftrag = Auftrag.query.get_or_404(id)
+    try:
+        auftrag = Auftrag.query.get_or_404(id)
+    except Exception as e:
+        app.logger.error(f"Fehler beim Laden des Auftrags: {e}")
+        flash('Fehler beim Laden des Auftrags. Bitte stellen Sie sicher, dass die Datenbank aktualisiert wurde.', 'error')
+        return redirect(url_for('auftraege'))
     
     if request.method == 'POST':
         try:
@@ -1105,10 +1110,22 @@ def auftrag_bearbeiten(id):
             return redirect(url_for('auftrag_bearbeiten', id=auftrag.id))
         except Exception as e:
             app.logger.error(f"Fehler beim Aktualisieren des Auftrags: {e}")
+            import traceback
+            app.logger.error(traceback.format_exc())
             flash(f'Fehler beim Aktualisieren des Auftrags: {str(e)}', 'error')
     
-    benutzer = User.query.filter(User.aktiv == True).all()
-    return render_template('auftrag_form.html', auftrag=auftrag, benutzer=benutzer)
+    try:
+        benutzer = User.query.filter(User.aktiv == True).all()
+        # Sicherstellen, dass todos verfügbar ist (auch wenn leer)
+        if not hasattr(auftrag, 'todos'):
+            auftrag.todos = []
+        return render_template('auftrag_form.html', auftrag=auftrag, benutzer=benutzer)
+    except Exception as e:
+        app.logger.error(f"Fehler beim Rendern des Templates: {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
+        flash(f'Fehler beim Laden der Seite: {str(e)}. Bitte prüfen Sie die Server-Logs.', 'error')
+        return redirect(url_for('auftraege'))
 
 @app.route('/auftraege/<int:id>/loeschen', methods=['POST'])
 @login_required
