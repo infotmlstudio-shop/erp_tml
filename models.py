@@ -147,6 +147,16 @@ class Artikel(db.Model):
         return self.bestand <= self.mindestbestand
 
 
+# Assoziations-Tabelle für Auftrag-Artikel (Many-to-Many mit zusätzlichen Feldern)
+# Muss VOR der Auftrag-Klasse definiert werden
+auftrag_artikel = db.Table('auftrag_artikel',
+    db.Column('auftrag_id', db.Integer, db.ForeignKey('auftrag.id'), primary_key=True),
+    db.Column('artikel_id', db.Integer, db.ForeignKey('artikel.id'), primary_key=True),
+    db.Column('menge', db.Integer, nullable=False, default=1),
+    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+)
+
+
 class Auftrag(db.Model):
     """Auftrag-Modell"""
     id = db.Column(db.Integer, primary_key=True)
@@ -199,15 +209,6 @@ class Todo(db.Model):
     
     def __repr__(self):
         return f'<Todo {self.titel} für Auftrag {self.auftrag_id}>'
-
-
-# Assoziations-Tabelle für Auftrag-Artikel (Many-to-Many mit zusätzlichen Feldern)
-auftrag_artikel = db.Table('auftrag_artikel',
-    db.Column('auftrag_id', db.Integer, db.ForeignKey('auftrag.id'), primary_key=True),
-    db.Column('artikel_id', db.Integer, db.ForeignKey('artikel.id'), primary_key=True),
-    db.Column('menge', db.Integer, nullable=False, default=1),
-    db.Column('created_at', db.DateTime, default=datetime.utcnow)
-)
 
 
 class Kunde(db.Model):
