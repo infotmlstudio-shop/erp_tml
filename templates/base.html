@@ -419,7 +419,7 @@
                         {% elif 'lieferanten' not in request.endpoint %}
                         <!-- Jahresfilter -->
                         {% set year_endpoint = request.endpoint or 'index' %}
-                {% if year_endpoint in ['benutzer_bearbeiten', 'rollen_bearbeiten', 'lieferanten_bearbeiten', 'lager_bearbeiten', 'artikel_bearbeiten'] %}
+                {% if year_endpoint in ['benutzer_bearbeiten', 'rollen_bearbeiten', 'lieferanten_bearbeiten', 'lager_bearbeiten', 'artikel_bearbeiten', 'auftrag_bearbeiten', 'auftrag_neu'] %}
                     {% set year_endpoint = 'index' %}
                 {% endif %}
                 <form method="GET" action="{{ url_for(year_endpoint) }}" class="d-flex align-items-center gap-2">
