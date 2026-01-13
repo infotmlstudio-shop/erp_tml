@@ -4,7 +4,7 @@ Datenbank initialisieren und Standard-Benutzer erstellen
 """
 
 from app import app, init_db
-from models import db, User
+from models import db, User, Auftrag, Todo
 
 if __name__ == '__main__':
     with app.app_context():
