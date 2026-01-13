@@ -368,6 +368,13 @@
                         </div>
                     </li>
                     
+                    <!-- Kunden -->
+                    <li class="nav-item mb-2">
+                        <a class="nav-link {% if 'kunde' in request.endpoint %}active{% endif %}" href="{{ url_for('kunden') }}" onclick="closeSidebarOnMobile()">
+                            <i class="bi bi-person-badge"></i> Kunden
+                        </a>
+                    </li>
+                    
                     <!-- Lager -->
                     <li class="nav-item mb-2">
                         <a class="nav-link {% if 'lager' in request.endpoint or 'artikel' in request.endpoint %}active{% endif %}" href="{{ url_for('lager') }}" onclick="closeSidebarOnMobile()">
@@ -419,7 +426,7 @@
                         {% elif 'lieferanten' not in request.endpoint %}
                         <!-- Jahresfilter -->
                         {% set year_endpoint = request.endpoint or 'index' %}
-                {% if year_endpoint in ['benutzer_bearbeiten', 'rollen_bearbeiten', 'lieferanten_bearbeiten', 'lager_bearbeiten', 'artikel_bearbeiten', 'auftrag_bearbeiten', 'auftrag_neu'] %}
+                {% if year_endpoint in ['benutzer_bearbeiten', 'rollen_bearbeiten', 'lieferanten_bearbeiten', 'lager_bearbeiten', 'artikel_bearbeiten', 'auftrag_bearbeiten', 'auftrag_neu', 'kunde_bearbeiten', 'kunde_neu'] %}
                     {% set year_endpoint = 'index' %}
                 {% endif %}
                 <form method="GET" action="{{ url_for(year_endpoint) }}" class="d-flex align-items-center gap-2">

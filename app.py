@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from models import db, User, Lieferant, Buchung, Lager, Artikel, Rolle, Auftrag, Todo
+from models import db, User, Lieferant, Buchung, Lager, Artikel, Rolle, Auftrag, Todo, Kunde, auftrag_artikel
 from config import Config
 from datetime import datetime, date
 from decimal import Decimal
@@ -1046,7 +1046,8 @@ def auftrag_neu():
                 auftragsnummer=auftragsnummer,
                 titel=request.form.get('titel'),
                 beschreibung=request.form.get('beschreibung', ''),
-                kunde=request.form.get('kunde', ''),
+                kunde_id=request.form.get('kunde_id') or None,
+                kunde=request.form.get('kunde', ''),  # Fallback für manuelle Eingabe
                 status=request.form.get('status', 'offen'),
                 prioritaet=request.form.get('prioritaet', 'normal'),
                 erstellt_von_id=current_user.id,
@@ -1073,7 +1074,9 @@ def auftrag_neu():
             flash(f'Fehler beim Erstellen des Auftrags: {str(e)}', 'error')
     
     benutzer = User.query.filter(User.aktiv == True).all()
-    return render_template('auftrag_form.html', auftrag=None, benutzer=benutzer)
+    kunden = Kunde.query.filter(Kunde.aktiv == True).order_by(Kunde.name).all()
+    artikel_liste = Artikel.query.join(Lager).filter(Lager.aktiv == True).order_by(Artikel.name).all()
+    return render_template('auftrag_form.html', auftrag=None, benutzer=benutzer, kunden=kunden, artikel_liste=artikel_liste, artikel_auftrag_mengen={})
 
 @app.route('/auftraege/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -1094,10 +1097,28 @@ def auftrag_bearbeiten(id):
         try:
             auftrag.titel = request.form.get('titel')
             auftrag.beschreibung = request.form.get('beschreibung', '')
-            auftrag.kunde = request.form.get('kunde', '')
+            auftrag.kunde_id = request.form.get('kunde_id') or None
+            auftrag.kunde = request.form.get('kunde', '')  # Fallback
             auftrag.status = request.form.get('status', 'offen')
             auftrag.prioritaet = request.form.get('prioritaet', 'normal')
             auftrag.zugewiesen_an_id = request.form.get('zugewiesen_an_id') or None
+            
+            # Artikel aktualisieren
+            # Alte Artikel entfernen
+            db.session.execute(auftrag_artikel.delete().where(auftrag_artikel.c.auftrag_id == auftrag.id))
+            # Neue Artikel hinzufügen
+            artikel_ids = request.form.getlist('artikel_id[]')
+            mengen = request.form.getlist('artikel_menge[]')
+            for artikel_id, menge in zip(artikel_ids, mengen):
+                if artikel_id and menge:
+                    artikel = Artikel.query.get(int(artikel_id))
+                    if artikel:
+                        stmt = auftrag_artikel.insert().values(
+                            auftrag_id=auftrag.id,
+                            artikel_id=int(artikel_id),
+                            menge=int(menge)
+                        )
+                        db.session.execute(stmt)
             
             if request.form.get('startdatum'):
                 auftrag.startdatum = datetime.strptime(request.form.get('startdatum'), '%Y-%m-%d').date()
@@ -1122,15 +1143,29 @@ def auftrag_bearbeiten(id):
     
     try:
         benutzer = User.query.filter(User.aktiv == True).all()
+        kunden = Kunde.query.filter(Kunde.aktiv == True).order_by(Kunde.name).all()
+        artikel_liste = Artikel.query.join(Lager).filter(Lager.aktiv == True).order_by(Artikel.name).all()
         # Sicherstellen, dass todos verfügbar ist (auch wenn leer)
         if not hasattr(auftrag, 'todos'):
             auftrag.todos = []
+        # Artikel-Mengen für Template vorbereiten
+        artikel_auftrag_mengen = {}
+        if auftrag.artikel:
+            for artikel in auftrag.artikel:
+                # Menge aus Assoziations-Tabelle abrufen
+                result = db.session.execute(
+                    db.select(auftrag_artikel.c.menge).where(
+                        auftrag_artikel.c.auftrag_id == auftrag.id,
+                        auftrag_artikel.c.artikel_id == artikel.id
+                    )
+                ).scalar()
+                artikel_auftrag_mengen[artikel.id] = result if result else 1
         # Sicherstellen, dass ID vorhanden ist
         if not auftrag.id:
             app.logger.error(f"Auftrag hat keine ID: {auftrag}")
             flash('Fehler: Auftrag hat keine ID. Bitte laden Sie die Seite neu.', 'error')
             return redirect(url_for('auftraege'))
-        return render_template('auftrag_form.html', auftrag=auftrag, benutzer=benutzer)
+        return render_template('auftrag_form.html', auftrag=auftrag, benutzer=benutzer, kunden=kunden, artikel_liste=artikel_liste, artikel_auftrag_mengen=artikel_auftrag_mengen)
     except Exception as e:
         app.logger.error(f"Fehler beim Rendern des Templates: {e}")
         import traceback
@@ -1291,6 +1326,88 @@ def auftrag_datum_update(id):
     db.session.commit()
     
     return jsonify({'success': True})
+
+# ==================== Kunden-Verwaltung ====================
+
+@app.route('/kunden')
+@login_required
+def kunden():
+    """Kunden-Übersicht"""
+    if not current_user.hat_berechtigung('kunden'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    kunden = Kunde.query.order_by(Kunde.name).all()
+    return render_template('kunden.html', kunden=kunden)
+
+@app.route('/kunden/neu', methods=['GET', 'POST'])
+@login_required
+def kunde_neu():
+    """Neuen Kunden erstellen"""
+    if not current_user.hat_berechtigung('kunden'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        try:
+            kunde = Kunde(
+                name=request.form.get('name'),
+                firma=request.form.get('firma', ''),
+                email=request.form.get('email', ''),
+                telefon=request.form.get('telefon', ''),
+                adresse=request.form.get('adresse', ''),
+                aktiv=request.form.get('aktiv') == 'on'
+            )
+            db.session.add(kunde)
+            db.session.commit()
+            flash('Kunde erfolgreich erstellt.', 'success')
+            return redirect(url_for('kunden'))
+        except Exception as e:
+            app.logger.error(f"Fehler beim Erstellen des Kunden: {e}")
+            flash(f'Fehler beim Erstellen des Kunden: {str(e)}', 'error')
+    
+    return render_template('kunde_form.html', kunde=None)
+
+@app.route('/kunden/<int:id>', methods=['GET', 'POST'])
+@login_required
+def kunde_bearbeiten(id):
+    """Kunde bearbeiten"""
+    if not current_user.hat_berechtigung('kunden'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    kunde = Kunde.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        try:
+            kunde.name = request.form.get('name')
+            kunde.firma = request.form.get('firma', '')
+            kunde.email = request.form.get('email', '')
+            kunde.telefon = request.form.get('telefon', '')
+            kunde.adresse = request.form.get('adresse', '')
+            kunde.aktiv = request.form.get('aktiv') == 'on'
+            db.session.commit()
+            flash('Kunde erfolgreich aktualisiert.', 'success')
+            return redirect(url_for('kunden'))
+        except Exception as e:
+            app.logger.error(f"Fehler beim Aktualisieren des Kunden: {e}")
+            flash(f'Fehler beim Aktualisieren des Kunden: {str(e)}', 'error')
+    
+    return render_template('kunde_form.html', kunde=kunde)
+
+@app.route('/kunden/<int:id>/loeschen', methods=['POST'])
+@login_required
+def kunde_loeschen(id):
+    """Kunde löschen"""
+    if not current_user.hat_berechtigung('kunden'):
+        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+        return redirect(url_for('index'))
+    
+    kunde = Kunde.query.get_or_404(id)
+    db.session.delete(kunde)
+    db.session.commit()
+    flash('Kunde erfolgreich gelöscht.', 'success')
+    return redirect(url_for('kunden'))
 
 # Initialisierung
 def init_db():

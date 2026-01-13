@@ -153,7 +153,8 @@ class Auftrag(db.Model):
     auftragsnummer = db.Column(db.String(50), unique=True, nullable=False)
     titel = db.Column(db.String(200), nullable=False)
     beschreibung = db.Column(db.Text, nullable=True)
-    kunde = db.Column(db.String(200), nullable=True)
+    kunde_id = db.Column(db.Integer, db.ForeignKey('kunde.id'), nullable=True)  # Beziehung zu Kunde
+    kunde = db.Column(db.String(200), nullable=True)  # Fallback für manuelle Eingabe
     status = db.Column(db.String(20), default='offen', nullable=False)  # offen, in_arbeit, abgeschlossen, storniert
     startdatum = db.Column(db.Date, nullable=True)  # Für Kalender-Planung
     enddatum = db.Column(db.Date, nullable=True)  # Für Kalender-Planung
@@ -167,6 +168,7 @@ class Auftrag(db.Model):
     erstellt_von = db.relationship('User', foreign_keys=[erstellt_von_id], backref='erstellte_auftraege')
     zugewiesen_an = db.relationship('User', foreign_keys=[zugewiesen_an_id], backref='zugewiesene_auftraege')
     todos = db.relationship('Todo', backref='auftrag', lazy=True, cascade='all, delete-orphan', order_by='Todo.position')
+    artikel = db.relationship('Artikel', secondary=auftrag_artikel, lazy='subquery', backref=db.backref('auftraege', lazy=True))
     
     def __repr__(self):
         return f'<Auftrag {self.auftragsnummer} {self.titel}>'
@@ -197,3 +199,31 @@ class Todo(db.Model):
     
     def __repr__(self):
         return f'<Todo {self.titel} für Auftrag {self.auftrag_id}>'
+
+
+# Assoziations-Tabelle für Auftrag-Artikel (Many-to-Many mit zusätzlichen Feldern)
+auftrag_artikel = db.Table('auftrag_artikel',
+    db.Column('auftrag_id', db.Integer, db.ForeignKey('auftrag.id'), primary_key=True),
+    db.Column('artikel_id', db.Integer, db.ForeignKey('artikel.id'), primary_key=True),
+    db.Column('menge', db.Integer, nullable=False, default=1),
+    db.Column('created_at', db.DateTime, default=datetime.utcnow)
+)
+
+
+class Kunde(db.Model):
+    """Kunden-Modell"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    firma = db.Column(db.String(200), nullable=True)
+    email = db.Column(db.String(200), nullable=True)
+    telefon = db.Column(db.String(50), nullable=True)
+    adresse = db.Column(db.Text, nullable=True)
+    aktiv = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Beziehungen
+    auftraege = db.relationship('Auftrag', backref='kunde_obj', lazy=True)
+    
+    def __repr__(self):
+        return f'<Kunde {self.name}>'
