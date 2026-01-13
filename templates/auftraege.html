@@ -67,9 +67,11 @@
                         {% endif %}
                     </small>
                     <div class="btn-group btn-group-sm">
+                        {% if auftrag.id %}
                         <a href="{{ url_for('auftrag_bearbeiten', id=auftrag.id) }}" class="btn btn-outline-primary">
                             <i class="bi bi-pencil"></i> <span class="d-none d-md-inline">Bearbeiten</span>
                         </a>
+                        {% endif %}
                         <a href="{{ url_for('auftragsplanung') }}" class="btn btn-outline-info">
                             <i class="bi bi-calendar-event"></i> <span class="d-none d-md-inline">Planung</span>
                         </a>

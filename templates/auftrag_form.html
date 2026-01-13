@@ -80,7 +80,7 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-save"></i> Speichern
                         </button>
-                        {% if auftrag %}
+                        {% if auftrag and auftrag.id %}
                         <form method="POST" action="{{ url_for('auftrag_loeschen', id=auftrag.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diesen Auftrag wirklich löschen? Alle zugehörigen Todos werden ebenfalls gelöscht.');">
                             <button type="submit" class="btn btn-danger">
                                 <i class="bi bi-trash"></i> Löschen
@@ -141,7 +141,7 @@
     {% endif %}
 </div>
 
-{% if auftrag %}
+{% if auftrag and auftrag.id %}
 <script>
 document.getElementById('todoForm').addEventListener('submit', function(e) {
     e.preventDefault();

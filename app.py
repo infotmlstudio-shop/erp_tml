@@ -1060,12 +1060,16 @@ def auftrag_neu():
                 auftrag.enddatum = datetime.strptime(request.form.get('enddatum'), '%Y-%m-%d').date()
             
             db.session.add(auftrag)
+            db.session.flush()  # ID generieren ohne Commit
+            auftrag_id = auftrag.id
             db.session.commit()
             
             flash('Auftrag erfolgreich erstellt.', 'success')
-            return redirect(url_for('auftrag_bearbeiten', id=auftrag.id))
+            return redirect(url_for('auftrag_bearbeiten', id=auftrag_id))
         except Exception as e:
             app.logger.error(f"Fehler beim Erstellen des Auftrags: {e}")
+            import traceback
+            app.logger.error(traceback.format_exc())
             flash(f'Fehler beim Erstellen des Auftrags: {str(e)}', 'error')
     
     benutzer = User.query.filter(User.aktiv == True).all()
@@ -1107,7 +1111,9 @@ def auftrag_bearbeiten(id):
             
             db.session.commit()
             flash('Auftrag erfolgreich aktualisiert.', 'success')
-            return redirect(url_for('auftrag_bearbeiten', id=auftrag.id))
+            # ID sicherstellen - verwende Parameter id falls auftrag.id None ist
+            auftrag_id = auftrag.id if auftrag.id else id
+            return redirect(url_for('auftrag_bearbeiten', id=auftrag_id))
         except Exception as e:
             app.logger.error(f"Fehler beim Aktualisieren des Auftrags: {e}")
             import traceback
@@ -1119,6 +1125,11 @@ def auftrag_bearbeiten(id):
         # Sicherstellen, dass todos verfügbar ist (auch wenn leer)
         if not hasattr(auftrag, 'todos'):
             auftrag.todos = []
+        # Sicherstellen, dass ID vorhanden ist
+        if not auftrag.id:
+            app.logger.error(f"Auftrag hat keine ID: {auftrag}")
+            flash('Fehler: Auftrag hat keine ID. Bitte laden Sie die Seite neu.', 'error')
+            return redirect(url_for('auftraege'))
         return render_template('auftrag_form.html', auftrag=auftrag, benutzer=benutzer)
     except Exception as e:
         app.logger.error(f"Fehler beim Rendern des Templates: {e}")
