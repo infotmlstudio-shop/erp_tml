@@ -1042,58 +1042,131 @@ def auftraege():
 @login_required
 def auftrag_neu():
     """Neuen Auftrag erstellen"""
-    if not current_user.hat_berechtigung('auftraege'):
-        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
-        return redirect(url_for('index'))
-    
-    if request.method == 'POST':
-        try:
-            # Auftragsnummer generieren
-            last_auftrag = Auftrag.query.order_by(Auftrag.id.desc()).first()
-            if last_auftrag:
+    try:
+        # Admin hat immer Zugriff
+        if current_user.username != 'admin' and not current_user.hat_berechtigung('auftraege'):
+            flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+            return redirect(url_for('index'))
+        
+        if request.method == 'POST':
+            try:
+                # Auftragsnummer generieren
                 try:
-                    last_num = int(last_auftrag.auftragsnummer.split('-')[-1]) if '-' in last_auftrag.auftragsnummer else 0
-                except:
+                    last_auftrag = Auftrag.query.order_by(Auftrag.id.desc()).first()
+                    if last_auftrag:
+                        try:
+                            last_num = int(last_auftrag.auftragsnummer.split('-')[-1]) if '-' in last_auftrag.auftragsnummer else 0
+                        except:
+                            last_num = 0
+                    else:
+                        last_num = 0
+                except Exception as e:
+                    app.logger.warning(f"Fehler beim Abrufen der letzten Auftragsnummer: {e}")
                     last_num = 0
-            else:
-                last_num = 0
-            auftragsnummer = f"AUF-{datetime.now().year}-{str(last_num + 1).zfill(4)}"
-            
-            auftrag = Auftrag(
-                auftragsnummer=auftragsnummer,
-                titel=request.form.get('titel'),
-                beschreibung=request.form.get('beschreibung', ''),
-                kunde_id=request.form.get('kunde_id') or None,
-                kunde=request.form.get('kunde', ''),  # Fallback für manuelle Eingabe
-                status=request.form.get('status', 'offen'),
-                prioritaet=request.form.get('prioritaet', 'normal'),
-                erstellt_von_id=current_user.id,
-                zugewiesen_an_id=request.form.get('zugewiesen_an_id') or None
-            )
-            
-            # Datum setzen falls vorhanden
-            if request.form.get('startdatum'):
-                auftrag.startdatum = datetime.strptime(request.form.get('startdatum'), '%Y-%m-%d').date()
-            if request.form.get('enddatum'):
-                auftrag.enddatum = datetime.strptime(request.form.get('enddatum'), '%Y-%m-%d').date()
-            
-            db.session.add(auftrag)
-            db.session.flush()  # ID generieren ohne Commit
-            auftrag_id = auftrag.id
-            db.session.commit()
-            
-            flash('Auftrag erfolgreich erstellt.', 'success')
-            return redirect(url_for('auftrag_bearbeiten', id=auftrag_id))
+                
+                auftragsnummer = f"AUF-{datetime.now().year}-{str(last_num + 1).zfill(4)}"
+                
+                # kunde_id konvertieren
+                kunde_id = request.form.get('kunde_id')
+                if kunde_id:
+                    try:
+                        kunde_id = int(kunde_id) if kunde_id else None
+                    except:
+                        kunde_id = None
+                else:
+                    kunde_id = None
+                
+                auftrag = Auftrag(
+                    auftragsnummer=auftragsnummer,
+                    titel=request.form.get('titel', ''),
+                    beschreibung=request.form.get('beschreibung', ''),
+                    kunde_id=kunde_id,
+                    kunde=request.form.get('kunde', ''),  # Fallback für manuelle Eingabe
+                    status=request.form.get('status', 'offen'),
+                    prioritaet=request.form.get('prioritaet', 'normal'),
+                    erstellt_von_id=current_user.id,
+                    zugewiesen_an_id=request.form.get('zugewiesen_an_id') or None
+                )
+                
+                # Datum setzen falls vorhanden
+                if request.form.get('startdatum'):
+                    try:
+                        auftrag.startdatum = datetime.strptime(request.form.get('startdatum'), '%Y-%m-%d').date()
+                    except:
+                        pass
+                if request.form.get('enddatum'):
+                    try:
+                        auftrag.enddatum = datetime.strptime(request.form.get('enddatum'), '%Y-%m-%d').date()
+                    except:
+                        pass
+                
+                db.session.add(auftrag)
+                db.session.flush()  # ID generieren ohne Commit
+                auftrag_id = auftrag.id
+                
+                # Artikel hinzufügen
+                artikel_ids = request.form.getlist('artikel_id[]')
+                artikel_mengen = request.form.getlist('artikel_menge[]')
+                
+                if artikel_ids and len(artikel_ids) > 0:
+                    for idx, artikel_id in enumerate(artikel_ids):
+                        if artikel_id:
+                            try:
+                                menge = int(artikel_mengen[idx]) if idx < len(artikel_mengen) and artikel_mengen[idx] else 1
+                                if menge > 0:
+                                    db.session.execute(
+                                        auftrag_artikel.insert().values(
+                                            auftrag_id=auftrag_id,
+                                            artikel_id=int(artikel_id),
+                                            menge=menge
+                                        )
+                                    )
+                            except Exception as e:
+                                app.logger.warning(f"Fehler beim Hinzufügen von Artikel {artikel_id}: {e}")
+                
+                db.session.commit()
+                
+                flash('Auftrag erfolgreich erstellt.', 'success')
+                return redirect(url_for('auftrag_bearbeiten', id=auftrag_id))
+            except Exception as e:
+                app.logger.error(f"Fehler beim Erstellen des Auftrags: {e}")
+                import traceback
+                app.logger.error(traceback.format_exc())
+                db.session.rollback()
+                flash(f'Fehler beim Erstellen des Auftrags: {str(e)}', 'error')
+        
+        # GET-Request: Formular anzeigen
+        try:
+            benutzer = User.query.filter(User.aktiv == True).all()
         except Exception as e:
-            app.logger.error(f"Fehler beim Erstellen des Auftrags: {e}")
-            import traceback
-            app.logger.error(traceback.format_exc())
-            flash(f'Fehler beim Erstellen des Auftrags: {str(e)}', 'error')
-    
-    benutzer = User.query.filter(User.aktiv == True).all()
-    kunden = Kunde.query.filter(Kunde.aktiv == True).order_by(Kunde.name).all()
-    artikel_liste = Artikel.query.join(Lager).filter(Lager.aktiv == True).order_by(Artikel.name).all()
-    return render_template('auftrag_form.html', auftrag=None, benutzer=benutzer, kunden=kunden, artikel_liste=artikel_liste, artikel_auftrag_mengen={})
+            app.logger.error(f"Fehler beim Abrufen der Benutzer: {e}")
+            benutzer = []
+        
+        try:
+            kunden = Kunde.query.filter(Kunde.aktiv == True).order_by(Kunde.name).all()
+        except Exception as e:
+            app.logger.error(f"Fehler beim Abrufen der Kunden: {e}")
+            kunden = []
+        
+        try:
+            # Artikel mit aktivem Lager abrufen
+            artikel_liste = Artikel.query.join(Lager).filter(Lager.aktiv == True).order_by(Artikel.name).all()
+        except Exception as e:
+            app.logger.error(f"Fehler beim Abrufen der Artikel (mit Join): {e}")
+            # Fallback: Alle Artikel abrufen
+            try:
+                artikel_liste = Artikel.query.order_by(Artikel.name).all()
+            except Exception as e2:
+                app.logger.error(f"Fehler beim Abrufen der Artikel (Fallback): {e2}")
+                artikel_liste = []
+        
+        return render_template('auftrag_form.html', auftrag=None, benutzer=benutzer, kunden=kunden, artikel_liste=artikel_liste, artikel_auftrag_mengen={})
+    except Exception as e:
+        app.logger.error(f"Fehler in auftrag_neu(): {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
+        flash(f'Fehler beim Laden der Seite: {str(e)}. Bitte prüfen Sie die Server-Logs.', 'error')
+        return redirect(url_for('auftraege'))
 
 @app.route('/auftraege/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -1159,9 +1232,28 @@ def auftrag_bearbeiten(id):
             flash(f'Fehler beim Aktualisieren des Auftrags: {str(e)}', 'error')
     
     try:
-        benutzer = User.query.filter(User.aktiv == True).all()
-        kunden = Kunde.query.filter(Kunde.aktiv == True).order_by(Kunde.name).all()
-        artikel_liste = Artikel.query.join(Lager).filter(Lager.aktiv == True).order_by(Artikel.name).all()
+        try:
+            benutzer = User.query.filter(User.aktiv == True).all()
+        except Exception as e:
+            app.logger.error(f"Fehler beim Abrufen der Benutzer: {e}")
+            benutzer = []
+        
+        try:
+            kunden = Kunde.query.filter(Kunde.aktiv == True).order_by(Kunde.name).all()
+        except Exception as e:
+            app.logger.error(f"Fehler beim Abrufen der Kunden: {e}")
+            kunden = []
+        
+        try:
+            artikel_liste = Artikel.query.join(Lager).filter(Lager.aktiv == True).order_by(Artikel.name).all()
+        except Exception as e:
+            app.logger.error(f"Fehler beim Abrufen der Artikel (mit Join): {e}")
+            # Fallback: Alle Artikel abrufen
+            try:
+                artikel_liste = Artikel.query.order_by(Artikel.name).all()
+            except Exception as e2:
+                app.logger.error(f"Fehler beim Abrufen der Artikel (Fallback): {e2}")
+                artikel_liste = []
         # Sicherstellen, dass todos verfügbar ist (auch wenn leer)
         if not hasattr(auftrag, 'todos'):
             auftrag.todos = []
