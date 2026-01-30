@@ -416,20 +416,25 @@ class GmailService:
             link = link.rstrip('.,;:!?)>"\'<>')
             # Entferne HTML-Tags am Ende
             link = re.sub(r'<[^>]+>$', '', link)
+            # Entferne mögliche abschließende HTML-Tags
+            link = re.sub(r'</a>.*$', '', link, flags=re.IGNORECASE)
             
             if not link.startswith('http'):
                 continue
             
-            # Priorisiere Links mit relevanten Keywords
+            # Für DTFWorld: Prüfe auch auf dtf-world.de Domain
             link_lower = link.lower()
+            is_dtfworld = 'dtf-world.de' in link_lower or 'dtfworld' in link_lower
+            
+            # Priorisiere Links mit relevanten Keywords oder DTFWorld-Domain
             if ('.pdf' in link_lower or 'download' in link_lower or 'invoice' in link_lower or 
-                'rechnung' in link_lower or 'dtfworld' in link_lower or 'bill' in link_lower or
-                'receipt' in link_lower or 'document' in link_lower):
+                'rechnung' in link_lower or is_dtfworld or 'bill' in link_lower or
+                'receipt' in link_lower or 'document' in link_lower or 'herunterladen' in link_lower):
                 prioritized_links.append(link)
-                logger.info(f"extract_links_from_message: Priorisierter Link gefunden: {link}")
+                logger.info(f"extract_links_from_message: Priorisierter Link gefunden (Länge: {len(link)}): {link[:100]}...")
             else:
                 other_links.append(link)
-                logger.debug(f"extract_links_from_message: Anderer Link gefunden: {link}")
+                logger.debug(f"extract_links_from_message: Anderer Link gefunden: {link[:100]}...")
         
         # Zuerst priorisierte Links, dann andere
         links = prioritized_links + other_links
@@ -544,8 +549,9 @@ class GmailService:
                 pdf_path = None
                 filename = None
                 
-                # Wenn PDF-Anhänge vorhanden, diese verwenden
+                # Wenn PDF-Anhänge vorhanden, diese verwenden (NICHT auch Links verarbeiten!)
                 if pdf_attachments:
+                    logger.info(f"Sync: {len(pdf_attachments)} PDF-Anhänge gefunden, verwende diese")
                     pdf_attachment = pdf_attachments[0]
                     filename = pdf_attachment['filename']
                     attachment_id = pdf_attachment['attachment_id']
@@ -554,6 +560,8 @@ class GmailService:
                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                     safe_filename = f"{timestamp}_{filename}"
                     pdf_path = self.download_attachment(message_id, attachment_id, safe_filename)
+                    if pdf_path:
+                        logger.info(f"Sync: PDF-Anhang erfolgreich heruntergeladen: {pdf_path}")
                 else:
                     # Keine PDF-Anhänge - prüfe ob Links vorhanden sind (z.B. für DTFWorld)
                     logger.info(f"Sync: Keine PDF-Anhänge gefunden für Nachricht {message_id}, suche nach Links...")
@@ -563,12 +571,14 @@ class GmailService:
                     if links:
                         # Versuche PDF von Links herunterzuladen
                         for idx, link in enumerate(links):
-                            logger.info(f"Sync: Versuche PDF von Link {idx+1}/{len(links)} herunterzuladen: {link}")
+                            logger.info(f"Sync: Versuche PDF von Link {idx+1}/{len(links)} herunterzuladen: {link[:100]}...")
                             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                             # Versuche Dateiname aus URL zu extrahieren
-                            link_filename = link.split('/')[-1].split('?')[0]
-                            if not link_filename or len(link_filename) < 3:
-                                link_filename = f"rechnung_{timestamp}.pdf"
+                            # Entferne Query-Parameter für Dateiname
+                            link_clean = link.split('?')[0]
+                            link_filename = link_clean.split('/')[-1]
+                            if not link_filename or len(link_filename) < 3 or len(link_filename) > 200:
+                                link_filename = f"rechnung_dtfworld_{timestamp}.pdf"
                             elif not link_filename.endswith('.pdf'):
                                 link_filename = f"{link_filename}.pdf"
                             safe_filename = f"{timestamp}_{link_filename}"
@@ -579,7 +589,7 @@ class GmailService:
                                 logger.info(f"Sync: PDF erfolgreich von Link heruntergeladen: {pdf_path}")
                                 break
                             else:
-                                logger.warning(f"Sync: Download von Link fehlgeschlagen: {link}")
+                                logger.warning(f"Sync: Download von Link fehlgeschlagen: {link[:100]}...")
                     else:
                         logger.warning(f"Sync: Keine Links gefunden in Nachricht {message_id}")
                 
