@@ -681,9 +681,25 @@ class GmailService:
                         logger.info(f"Sync: Erste Links: {links[:3]}")
                     
                     if links:
+                        # Priorisiere Links, die wahrscheinlich PDFs sind (z.B. "download-pdf", "invoice")
+                        pdf_links = []
+                        other_links = []
+                        for link in links:
+                            link_lower = link.lower()
+                            if ('download-pdf' in link_lower or 'invoice' in link_lower or 
+                                'rechnung' in link_lower or 'bill' in link_lower or
+                                link_lower.endswith('.pdf') or '/pdf/' in link_lower):
+                                pdf_links.append(link)
+                            else:
+                                other_links.append(link)
+                        
+                        # Zuerst PDF-Links versuchen, dann andere
+                        links_to_try = pdf_links + other_links
+                        logger.info(f"Sync: {len(pdf_links)} PDF-Links, {len(other_links)} andere Links gefunden")
+                        
                         # Versuche PDF von Links herunterzuladen
-                        for idx, link in enumerate(links):
-                            logger.info(f"Sync: Versuche PDF von Link {idx+1}/{len(links)} herunterzuladen: {link[:100]}...")
+                        for idx, link in enumerate(links_to_try):
+                            logger.info(f"Sync: Versuche PDF von Link {idx+1}/{len(links_to_try)} herunterzuladen: {link[:100]}...")
                             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                             # Versuche Dateiname aus URL zu extrahieren
                             # Entferne Query-Parameter für Dateiname
@@ -697,9 +713,21 @@ class GmailService:
                             
                             pdf_path = self.download_pdf_from_url(link, safe_filename)
                             if pdf_path:
-                                filename = safe_filename
-                                logger.info(f"Sync: PDF erfolgreich von Link heruntergeladen: {pdf_path}")
-                                break
+                                # Prüfe ob es wirklich ein PDF ist (Magic Number)
+                                try:
+                                    with open(pdf_path, 'rb') as f:
+                                        first_bytes = f.read(4)
+                                        if first_bytes == b'%PDF':
+                                            filename = safe_filename
+                                            logger.info(f"Sync: PDF erfolgreich von Link heruntergeladen: {pdf_path}")
+                                            break
+                                        else:
+                                            logger.warning(f"Sync: Heruntergeladene Datei ist kein PDF (Magic Number: {first_bytes})")
+                                            os.remove(pdf_path)
+                                            pdf_path = None
+                                except Exception as e:
+                                    logger.error(f"Sync: Fehler beim Prüfen der PDF-Datei: {e}")
+                                    pdf_path = None
                             else:
                                 logger.warning(f"Sync: Download von Link fehlgeschlagen: {link[:100]}...")
                     else:
@@ -772,11 +800,23 @@ class GmailService:
                 logger.info(f"Sync: Analysiere PDF: {pdf_path}")
                 pdf_data = self.pdf_service.extract_invoice_data(pdf_path)
                 
+                # Für DTFWorld: Auch bei fehlgeschlagener Analyse Buchung erstellen
                 if not pdf_data:
                     msg = f"Sync: PDF-Analyse fehlgeschlagen für {filename}"
                     print(msg)
                     logger.warning(msg)
-                    continue
+                    if lieferant and lieferant.name and 'DTFWorld' in lieferant.name:
+                        # Für DTFWorld: Erstelle Buchung mit Fallback-Werten
+                        logger.warning(f"Sync: DTFWorld - Erstelle Buchung trotz fehlgeschlagener PDF-Analyse")
+                        pdf_data = {
+                            'betrag': 0,  # Muss manuell korrigiert werden
+                            'datum': datetime.now().date(),
+                            'rechnungsnummer': '',
+                            'titel': 'DTFWorld'
+                        }
+                    else:
+                        # Für andere Lieferanten: Überspringe bei fehlgeschlagener Analyse
+                        continue
                 
                 msg = f"Sync: PDF analysiert - Betrag: {pdf_data.get('betrag')}, Datum: {pdf_data.get('datum')}, Rechnungsnummer: {pdf_data.get('rechnungsnummer')}"
                 print(msg)
