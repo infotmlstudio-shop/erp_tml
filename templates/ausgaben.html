@@ -45,7 +45,7 @@
                             <th style="width: 18%;" class="text-center">Von Zielkonto abgebucht</th>
                             <th style="width: 10%;">Quelle</th>
                             <th style="width: 8%;">PDF</th>
-                            {% if current_user.username == 'admin' %}
+                            {% if current_user and current_user.is_authenticated and current_user.username == 'admin' %}
                             <th style="width: 6%;">Aktionen</th>
                             {% endif %}
                         </tr>
@@ -81,7 +81,7 @@
                                     -
                                 {% endif %}
                             </td>
-                            {% if current_user.username == 'admin' %}
+                            {% if current_user and current_user.is_authenticated and current_user.username == 'admin' %}
                             <td data-label="Aktionen">
                                 <form method="POST" action="{{ url_for('ausgaben_loeschen', buchung_id=buchung.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diese Ausgabe wirklich löschen?');">
                                     <button type="submit" class="btn btn-sm btn-outline-danger">

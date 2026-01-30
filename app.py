@@ -193,55 +193,62 @@ def einnahmen_neu():
 @app.route('/ausgaben')
 @login_required
 def ausgaben():
-    """Ausgaben-Übersicht"""
-    if not current_user.hat_berechtigung('ausgaben'):
-        flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
-        return redirect(url_for('index'))
     """Ausgaben-Übersicht nach Lieferanten gruppiert"""
-    jahr = request.args.get('jahr', type=int)
-    if not jahr:
-        current_year = datetime.now().year
-        jahr = current_year if current_year >= 2025 else 2025
-    
-    # Alle aktiven Ausgaben-Lieferanten
-    lieferanten = Lieferant.query.filter_by(typ='Ausgabe', aktiv=True).order_by(Lieferant.name).all()
-    
-    # Buchungen nach Lieferant gruppiert
-    ausgaben_dict = {}
-    ausgaben_summens = {}  # Dictionary für Gesamtbeträge
-    
-    for lieferant in lieferanten:
-        buchungen = Buchung.query.filter(
+    try:
+        if not current_user.hat_berechtigung('ausgaben'):
+            flash('Sie haben keine Berechtigung für diesen Bereich.', 'error')
+            return redirect(url_for('index'))
+        
+        jahr = request.args.get('jahr', type=int)
+        if not jahr:
+            current_year = datetime.now().year
+            jahr = current_year if current_year >= 2025 else 2025
+        
+        # Alle aktiven Ausgaben-Lieferanten
+        lieferanten = Lieferant.query.filter_by(typ='Ausgabe', aktiv=True).order_by(Lieferant.name).all()
+        
+        # Buchungen nach Lieferant gruppiert
+        ausgaben_dict = {}
+        ausgaben_summens = {}  # Dictionary für Gesamtbeträge
+        
+        for lieferant in lieferanten:
+            buchungen = Buchung.query.filter(
+                Buchung.typ == 'Ausgabe',
+                Buchung.lieferant_id == lieferant.id,
+                Buchung.jahr == jahr
+            ).order_by(Buchung.datum.desc()).all()
+            if buchungen:
+                ausgaben_dict[lieferant] = buchungen
+                # Gesamtbetrag berechnen
+                gesamtbetrag = sum(float(b.betrag) for b in buchungen)
+                ausgaben_summens[lieferant] = gesamtbetrag
+        
+        # Buchungen ohne Lieferant
+        buchungen_ohne_lieferant = Buchung.query.filter(
             Buchung.typ == 'Ausgabe',
-            Buchung.lieferant_id == lieferant.id,
+            Buchung.lieferant_id.is_(None),
             Buchung.jahr == jahr
         ).order_by(Buchung.datum.desc()).all()
-        if buchungen:
-            ausgaben_dict[lieferant] = buchungen
+        
+        if buchungen_ohne_lieferant:
+            ausgaben_dict[None] = buchungen_ohne_lieferant
             # Gesamtbetrag berechnen
-            gesamtbetrag = sum(float(b.betrag) for b in buchungen)
-            ausgaben_summens[lieferant] = gesamtbetrag
-    
-    # Buchungen ohne Lieferant
-    buchungen_ohne_lieferant = Buchung.query.filter(
-        Buchung.typ == 'Ausgabe',
-        Buchung.lieferant_id.is_(None),
-        Buchung.jahr == jahr
-    ).order_by(Buchung.datum.desc()).all()
-    
-    if buchungen_ohne_lieferant:
-        ausgaben_dict[None] = buchungen_ohne_lieferant
-        # Gesamtbetrag berechnen
-        gesamtbetrag = sum(float(b.betrag) for b in buchungen_ohne_lieferant)
-        ausgaben_summens[None] = gesamtbetrag
-    
-    # Jahre für Dropdown
-    current_year = datetime.now().year
-    start_year = 2025
-    end_year = current_year + 2
-    jahre = list(range(start_year, end_year + 1))
-    
-    return render_template('ausgaben.html', ausgaben_dict=ausgaben_dict, ausgaben_summens=ausgaben_summens, jahr=jahr, jahre=jahre)
+            gesamtbetrag = sum(float(b.betrag) for b in buchungen_ohne_lieferant)
+            ausgaben_summens[None] = gesamtbetrag
+        
+        # Jahre für Dropdown
+        current_year = datetime.now().year
+        start_year = 2025
+        end_year = current_year + 2
+        jahre = list(range(start_year, end_year + 1))
+        
+        return render_template('ausgaben.html', ausgaben_dict=ausgaben_dict, ausgaben_summens=ausgaben_summens, jahr=jahr, jahre=jahre)
+    except Exception as e:
+        app.logger.error(f"Fehler in ausgaben(): {e}")
+        import traceback
+        app.logger.error(traceback.format_exc())
+        flash(f'Fehler beim Laden der Ausgaben: {str(e)}. Bitte prüfen Sie die Server-Logs.', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/ausgaben/zielkonto/<int:buchung_id>', methods=['POST'])
 @login_required
