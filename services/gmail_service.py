@@ -2,6 +2,8 @@ import os
 import base64
 import email
 import json
+import re
+import requests
 from email.mime.text import MIMEText
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -349,6 +351,92 @@ class GmailService:
         
         return attachments
     
+    def extract_links_from_message(self, message):
+        """Links aus E-Mail extrahieren (für DTFWorld etc.)"""
+        links = []
+        
+        if 'payload' not in message:
+            return links
+        
+        def extract_text_from_part(part):
+            """Text aus einem E-Mail-Part extrahieren"""
+            text = ""
+            if 'body' in part and 'data' in part['body']:
+                try:
+                    text = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8', errors='ignore')
+                except:
+                    pass
+            if 'parts' in part:
+                for subpart in part['parts']:
+                    text += extract_text_from_part(subpart)
+            return text
+        
+        payload = message['payload']
+        email_text = extract_text_from_part(payload)
+        
+        # Suche nach HTTP/HTTPS-Links
+        url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
+        found_links = re.findall(url_pattern, email_text)
+        
+        # Filtere Links, die auf PDFs verweisen könnten
+        for link in found_links:
+            # Entferne mögliche Anführungszeichen oder Klammern am Ende
+            link = link.rstrip('.,;:!?)>"\'')
+            # Prüfe ob Link auf PDF verweist oder verdächtig ist (z.B. DTFWorld)
+            if '.pdf' in link.lower() or 'download' in link.lower() or 'invoice' in link.lower() or 'rechnung' in link.lower() or 'dtfworld' in link.lower():
+                links.append(link)
+            # Auch generische Links aufnehmen, falls keine PDF-Anhänge gefunden wurden
+            elif link.startswith('http'):
+                links.append(link)
+        
+        return links
+    
+    def download_pdf_from_url(self, url, filename):
+        """PDF von URL herunterladen"""
+        try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Lade PDF von URL: {url}")
+            
+            # Headers setzen, um als Browser zu erscheinen
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            # Request mit Timeout
+            response = requests.get(url, headers=headers, timeout=30, allow_redirects=True)
+            response.raise_for_status()
+            
+            # Prüfe ob es wirklich ein PDF ist
+            content_type = response.headers.get('Content-Type', '').lower()
+            if 'pdf' not in content_type and not url.lower().endswith('.pdf'):
+                # Prüfe die ersten Bytes (PDF-Magic-Number: %PDF)
+                if not response.content[:4] == b'%PDF':
+                    logger.warning(f"URL liefert kein PDF: Content-Type={content_type}")
+                    # Versuche trotzdem zu speichern, falls es doch ein PDF ist
+            
+            # Upload-Ordner bestimmen
+            if hasattr(current_app, 'config'):
+                upload_folder = current_app.config['UPLOAD_FOLDER']
+            else:
+                upload_folder = os.environ.get('UPLOAD_FOLDER', 'data/rechnungen')
+            
+            # Datei speichern
+            os.makedirs(upload_folder, exist_ok=True)
+            filepath = os.path.join(upload_folder, filename)
+            
+            with open(filepath, 'wb') as f:
+                f.write(response.content)
+            
+            logger.info(f"PDF erfolgreich heruntergeladen: {filepath}")
+            return filepath
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Fehler beim Herunterladen von URL {url}: {e}")
+            return None
+    
     def sync_rechnungen(self):
         """Rechnungen aus Gmail synchronisieren"""
         self._ensure_authenticated()
@@ -391,20 +479,43 @@ class GmailService:
                 # PDF-Anhänge finden
                 pdf_attachments = self.extract_pdf_attachments(message_details)
                 
-                if not pdf_attachments:
-                    continue
+                pdf_path = None
+                filename = None
                 
-                # Ersten PDF-Anhang verarbeiten
-                pdf_attachment = pdf_attachments[0]
-                filename = pdf_attachment['filename']
-                attachment_id = pdf_attachment['attachment_id']
-                
-                # PDF herunterladen
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                safe_filename = f"{timestamp}_{filename}"
-                pdf_path = self.download_attachment(message_id, attachment_id, safe_filename)
+                # Wenn PDF-Anhänge vorhanden, diese verwenden
+                if pdf_attachments:
+                    pdf_attachment = pdf_attachments[0]
+                    filename = pdf_attachment['filename']
+                    attachment_id = pdf_attachment['attachment_id']
+                    
+                    # PDF herunterladen
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    safe_filename = f"{timestamp}_{filename}"
+                    pdf_path = self.download_attachment(message_id, attachment_id, safe_filename)
+                else:
+                    # Keine PDF-Anhänge - prüfe ob Links vorhanden sind (z.B. für DTFWorld)
+                    links = self.extract_links_from_message(message_details)
+                    logger.info(f"Sync: Keine PDF-Anhänge, aber {len(links)} Links gefunden")
+                    
+                    if links:
+                        # Versuche PDF von Links herunterzuladen
+                        for link in links:
+                            logger.info(f"Sync: Versuche PDF von Link herunterzuladen: {link}")
+                            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                            # Versuche Dateiname aus URL zu extrahieren
+                            link_filename = link.split('/')[-1].split('?')[0]
+                            if not link_filename.endswith('.pdf'):
+                                link_filename = f"rechnung_{timestamp}.pdf"
+                            safe_filename = f"{timestamp}_{link_filename}"
+                            
+                            pdf_path = self.download_pdf_from_url(link, safe_filename)
+                            if pdf_path:
+                                filename = safe_filename
+                                logger.info(f"Sync: PDF erfolgreich von Link heruntergeladen: {pdf_path}")
+                                break
                 
                 if not pdf_path:
+                    logger.warning(f"Sync: Keine PDF gefunden für Nachricht {message_id}")
                     continue
                 
                 # PDF analysieren
