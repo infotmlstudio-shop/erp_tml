@@ -553,27 +553,46 @@ class GmailService:
                 logger.info(msg)
                 continue  # Weiter mit nächstem Lieferanten
             
-            for idx, msg in enumerate(messages):
+            msg = f"Sync: Beginne Verarbeitung von {len(messages)} E-Mails für Lieferant '{lieferant.name}'"
+            print(msg)
+            logger.info(msg)
+            
+            for idx_msg, msg in enumerate(messages):
                 message_id = msg['id']
-                msg_info = f"Sync: Verarbeite E-Mail {idx+1}/{len(messages)} (ID: {message_id}) für Lieferant '{lieferant.name}'"
+                msg_info = f"Sync: Verarbeite E-Mail {idx_msg+1}/{len(messages)} (ID: {message_id}) für Lieferant '{lieferant.name}'"
                 print(msg_info)
                 logger.info(msg_info)
                 
                 # Prüfen ob bereits importiert
-                existing = Buchung.query.filter_by(gmail_message_id=message_id).first()
-                if existing:
-                    msg_info = f"Sync: E-Mail {message_id} wurde bereits importiert (Buchung ID: {existing.id})"
+                try:
+                    existing = Buchung.query.filter_by(gmail_message_id=message_id).first()
+                    if existing:
+                        msg_info = f"Sync: E-Mail {message_id} wurde bereits importiert (Buchung ID: {existing.id})"
+                        print(msg_info)
+                        logger.info(msg_info)
+                        continue
+                except Exception as e:
+                    msg_info = f"Sync: Fehler beim Prüfen ob E-Mail bereits importiert: {e}"
                     print(msg_info)
-                    logger.info(msg_info)
+                    logger.error(msg_info)
                     continue
                 
                 # Nachrichtendetails abrufen
-                print(f"Sync: Lade Nachrichtendetails für {message_id}...")
-                logger.info(f"Sync: Lade Nachrichtendetails für {message_id}...")
-                message_details = self.get_message_details(message_id)
-                if not message_details:
-                    print(f"Sync: Konnte Nachrichtendetails nicht laden für {message_id}")
-                    logger.warning(f"Sync: Konnte Nachrichtendetails nicht laden für {message_id}")
+                try:
+                    print(f"Sync: Lade Nachrichtendetails für {message_id}...")
+                    logger.info(f"Sync: Lade Nachrichtendetails für {message_id}...")
+                    message_details = self.get_message_details(message_id)
+                    if not message_details:
+                        msg = f"Sync: Konnte Nachrichtendetails nicht laden für {message_id}"
+                        print(msg)
+                        logger.warning(msg)
+                        continue
+                except Exception as e:
+                    msg = f"Sync: Fehler beim Laden der Nachrichtendetails für {message_id}: {e}"
+                    print(msg)
+                    logger.error(msg)
+                    import traceback
+                    logger.error(traceback.format_exc())
                     continue
                 
                 # PDF-Anhänge finden
