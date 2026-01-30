@@ -528,14 +528,15 @@ class GmailService:
             for lieferant in lieferanten:
                 logger.info(f"  - '{lieferant.name}' (ID: {lieferant.id}, Typ: {lieferant.typ}, Aktiv: {lieferant.aktiv}, Label: '{lieferant.gmail_label}')")
         
-        for lieferant in lieferanten:
+        for idx, lieferant in enumerate(lieferanten):
             # Nachrichten für dieses Label abrufen
-            logger.info(f"Sync: Suche E-Mails für Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'...")
+            logger.info(f"Sync: [{idx+1}/{len(lieferanten)}] Verarbeite Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'...")
             messages = self.get_messages_by_label(lieferant.gmail_label)
             logger.info(f"Sync: Lieferant '{lieferant.name}' - {len(messages)} E-Mails gefunden")
             
             if len(messages) == 0:
-                logger.warning(f"Sync: Keine E-Mails gefunden für Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'")
+                logger.info(f"Sync: Keine E-Mails gefunden für Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'")
+                continue  # Weiter mit nächstem Lieferanten
             
             for idx, msg in enumerate(messages):
                 message_id = msg['id']
