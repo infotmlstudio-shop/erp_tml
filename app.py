@@ -707,12 +707,15 @@ def gmail_sync():
             return redirect(url_for('index'))
         
         # Synchronisation durchführen
+        app.logger.info("Gmail-Synchronisation wird gestartet...")
         anzahl = gmail_service.sync_rechnungen()
+        app.logger.info(f"Gmail-Synchronisation abgeschlossen: {anzahl} neue Rechnungen")
         
         if anzahl > 0:
             flash(f'{anzahl} neue Rechnungen wurden importiert.', 'success')
         else:
             flash('Keine neuen Rechnungen gefunden.', 'info')
+            app.logger.info("Keine neuen Rechnungen gefunden - prüfe Logs für Details")
             
     except Exception as e:
         import traceback

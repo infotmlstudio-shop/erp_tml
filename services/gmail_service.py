@@ -476,8 +476,15 @@ class GmailService:
     
     def sync_rechnungen(self):
         """Rechnungen aus Gmail synchronisieren"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("="*60)
+        logger.info("Gmail-Synchronisation gestartet")
+        logger.info("="*60)
+        
         self._ensure_authenticated()
         if not self.service:
+            logger.error("Warnung: Gmail-Service konnte nicht initialisiert werden")
             print("Warnung: Gmail-Service konnte nicht initialisiert werden")
             return 0
         
@@ -490,22 +497,27 @@ class GmailService:
             Lieferant.gmail_label != ''
         ).all()
         
-        import logging
-        logger = logging.getLogger(__name__)
         logger.info(f"Sync: Gefundene Lieferanten mit Labels: {len(lieferanten)}")
         for lieferant in lieferanten:
             logger.info(f"Sync: Prüfe Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'")
         
         for lieferant in lieferanten:
             # Nachrichten für dieses Label abrufen
+            logger.info(f"Sync: Suche E-Mails für Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'...")
             messages = self.get_messages_by_label(lieferant.gmail_label)
             logger.info(f"Sync: Lieferant '{lieferant.name}' - {len(messages)} E-Mails gefunden")
             
-            for msg in messages:
+            if len(messages) == 0:
+                logger.warning(f"Sync: Keine E-Mails gefunden für Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'")
+            
+            for idx, msg in enumerate(messages):
                 message_id = msg['id']
+                logger.info(f"Sync: Verarbeite E-Mail {idx+1}/{len(messages)} (ID: {message_id})")
                 
                 # Prüfen ob bereits importiert
-                if Buchung.query.filter_by(gmail_message_id=message_id).first():
+                existing = Buchung.query.filter_by(gmail_message_id=message_id).first()
+                if existing:
+                    logger.info(f"Sync: E-Mail {message_id} wurde bereits importiert (Buchung ID: {existing.id})")
                     continue
                 
                 # Nachrichtendetails abrufen
@@ -639,7 +651,11 @@ class GmailService:
                 
                 db.session.add(buchung)
                 anzahl += 1
+                logger.info(f"Sync: Buchung erstellt für Lieferant '{lieferant.name}' - Betrag: {buchung.betrag}, Rechnungsnummer: {rechnungsnummer}")
         
         db.session.commit()
+        logger.info("="*60)
+        logger.info(f"Gmail-Synchronisation abgeschlossen: {anzahl} neue Rechnungen importiert")
+        logger.info("="*60)
         return anzahl
 
