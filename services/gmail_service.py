@@ -1,6 +1,7 @@
 import os
 import base64
 import email
+import json
 from email.mime.text import MIMEText
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -121,16 +122,28 @@ class GmailService:
             if creds and creds.expired and creds.refresh_token:
                 try:
                     logger.info("Token abgelaufen, versuche Refresh...")
+                    logger.info(f"Refresh-Token vorhanden: {bool(creds.refresh_token)}")
                     creds.refresh(Request())
                     logger.info("Token erfolgreich aktualisiert")
-                    # Aktualisiertes Token speichern
+                    # Aktualisiertes Token speichern - WICHTIG: Refresh-Token beibehalten
                     os.makedirs(os.path.dirname(token_path), exist_ok=True)
                     with open(token_path, 'w') as token:
                         token.write(creds.to_json())
+                    logger.info("Aktualisiertes Token gespeichert")
                 except Exception as e:
                     logger.error(f"Fehler beim Token-Refresh: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
                     print(f"Fehler beim Token-Refresh: {e}")
+                    # Prüfe ob Refresh-Token fehlt oder ungültig ist
+                    if 'invalid_grant' in str(e).lower():
+                        logger.error("Refresh-Token ist ungültig oder abgelaufen. Neuer OAuth-Flow erforderlich.")
+                        print("Refresh-Token ist ungültig. Bitte erstellen Sie ein neues Token.")
                     creds = None
+            elif creds and creds.expired and not creds.refresh_token:
+                logger.warning("Token abgelaufen, aber kein Refresh-Token vorhanden")
+                print("Token abgelaufen, aber kein Refresh-Token vorhanden. Neuer OAuth-Flow erforderlich.")
+                creds = None
             
             # Wenn immer noch keine gültigen Credentials, neuen OAuth-Flow starten
             if not creds or not creds.valid:
@@ -188,10 +201,29 @@ class GmailService:
                     logger.error(error_msg)
                     raise Exception("OAuth-Authentifizierung fehlgeschlagen. Bitte führen Sie 'python scripts/setup_gmail_auth.py' aus.")
             
-            # Token speichern
-            os.makedirs(os.path.dirname(token_path), exist_ok=True)
-            with open(token_path, 'w') as token:
-                token.write(creds.to_json())
+            # Token speichern - WICHTIG: Refresh-Token beibehalten falls vorhanden
+            if creds:
+                os.makedirs(os.path.dirname(token_path), exist_ok=True)
+                # Stelle sicher, dass Refresh-Token erhalten bleibt
+                token_data = creds.to_json()
+                # Wenn bereits ein Token existiert, prüfe ob Refresh-Token vorhanden ist
+                if os.path.exists(token_path):
+                    try:
+                        with open(token_path, 'r') as f:
+                            old_token_data = json.load(f)
+                            # Wenn alter Token einen Refresh-Token hat, aber neuer nicht, behalte den alten
+                            if 'refresh_token' in old_token_data and old_token_data['refresh_token']:
+                                new_token_data = json.loads(token_data)
+                                if not new_token_data.get('refresh_token'):
+                                    new_token_data['refresh_token'] = old_token_data['refresh_token']
+                                    token_data = json.dumps(new_token_data)
+                                    logger.info("Refresh-Token aus altem Token übernommen")
+                    except Exception as e:
+                        logger.warning(f"Konnte alten Token nicht lesen: {e}")
+                
+                with open(token_path, 'w') as token:
+                    token.write(token_data)
+                logger.info("Token gespeichert (inkl. Refresh-Token falls vorhanden)")
         
         try:
             self.service = build('gmail', 'v1', credentials=creds)
