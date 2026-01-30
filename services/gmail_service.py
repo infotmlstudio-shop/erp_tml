@@ -567,14 +567,45 @@ class GmailService:
                 try:
                     existing = Buchung.query.filter_by(gmail_message_id=message_id).first()
                     if existing:
-                        msg_info = f"Sync: E-Mail {message_id} wurde bereits importiert (Buchung ID: {existing.id})"
-                        print(msg_info)
-                        logger.info(msg_info)
-                        continue
+                        # Prüfe ob PDF vorhanden ist (absoluter oder relativer Pfad)
+                        pdf_exists = False
+                        if existing.pdf_pfad:
+                            # Prüfe absoluten Pfad
+                            if os.path.isabs(existing.pdf_pfad) and os.path.exists(existing.pdf_pfad):
+                                pdf_exists = True
+                            # Prüfe relativen Pfad (relativ zu UPLOAD_FOLDER)
+                            elif not os.path.isabs(existing.pdf_pfad):
+                                if hasattr(current_app, 'config'):
+                                    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'data/rechnungen')
+                                else:
+                                    upload_folder = os.environ.get('UPLOAD_FOLDER', 'data/rechnungen')
+                                relative_path = os.path.join(upload_folder, existing.pdf_pfad)
+                                if os.path.exists(relative_path):
+                                    pdf_exists = True
+                        
+                        # Wenn bereits importiert und PDF vorhanden, überspringen
+                        if pdf_exists:
+                            msg_info = f"Sync: E-Mail {message_id} wurde bereits importiert (Buchung ID: {existing.id}) mit PDF"
+                            print(msg_info)
+                            logger.info(msg_info)
+                            continue
+                        # Wenn bereits importiert aber kein PDF vorhanden, erneut verarbeiten
+                        else:
+                            msg_info = f"Sync: E-Mail {message_id} wurde bereits importiert (Buchung ID: {existing.id}), aber PDF fehlt. Versuche erneut..."
+                            print(msg_info)
+                            logger.warning(msg_info)
+                            # Lösche die alte Buchung, um sie erneut zu erstellen
+                            db.session.delete(existing)
+                            db.session.commit()
+                            msg_info = f"Sync: Alte Buchung {existing.id} gelöscht, verarbeite E-Mail erneut..."
+                            print(msg_info)
+                            logger.info(msg_info)
                 except Exception as e:
                     msg_info = f"Sync: Fehler beim Prüfen ob E-Mail bereits importiert: {e}"
                     print(msg_info)
                     logger.error(msg_info)
+                    import traceback
+                    logger.error(traceback.format_exc())
                     continue
                 
                 # Nachrichtendetails abrufen
