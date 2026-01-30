@@ -714,17 +714,17 @@ class GmailService:
                     
                     # Wenn PDF-Anhänge vorhanden, diese verwenden (NICHT auch Links verarbeiten!)
                     if pdf_attachments:
-                    logger.info(f"Sync: {len(pdf_attachments)} PDF-Anhänge gefunden, verwende diese")
-                    pdf_attachment = pdf_attachments[0]
-                    filename = pdf_attachment['filename']
-                    attachment_id = pdf_attachment['attachment_id']
-                    
-                    # PDF herunterladen
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    safe_filename = f"{timestamp}_{filename}"
-                    pdf_path = self.download_attachment(message_id, attachment_id, safe_filename)
-                    if pdf_path:
-                        logger.info(f"Sync: PDF-Anhang erfolgreich heruntergeladen: {pdf_path}")
+                        logger.info(f"Sync: {len(pdf_attachments)} PDF-Anhänge gefunden, verwende diese")
+                        pdf_attachment = pdf_attachments[0]
+                        filename = pdf_attachment['filename']
+                        attachment_id = pdf_attachment['attachment_id']
+                        
+                        # PDF herunterladen
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        safe_filename = f"{timestamp}_{filename}"
+                        pdf_path = self.download_attachment(message_id, attachment_id, safe_filename)
+                        if pdf_path:
+                            logger.info(f"Sync: PDF-Anhang erfolgreich heruntergeladen: {pdf_path}")
                 else:
                     # Keine PDF-Anhänge - prüfe ob Links vorhanden sind (z.B. für DTFWorld)
                     msg_info = f"Sync: Keine PDF-Anhänge gefunden für Nachricht {message_id}, suche nach Links..."
