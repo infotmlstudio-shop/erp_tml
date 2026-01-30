@@ -661,18 +661,59 @@ class GmailService:
                     logger.error(traceback.format_exc())
                     continue
                 
-                # PDF-Anhänge finden
-                print(f"Sync: Suche PDF-Anhänge in E-Mail {message_id}...")
-                logger.info(f"Sync: Suche PDF-Anhänge in E-Mail {message_id}...")
-                pdf_attachments = self.extract_pdf_attachments(message_details)
-                print(f"Sync: {len(pdf_attachments)} PDF-Anhänge gefunden")
-                logger.info(f"Sync: {len(pdf_attachments)} PDF-Anhänge gefunden")
-                
+                # Für DTFWorld: Anhänge ignorieren und direkt nach Links suchen
+                # Für andere Lieferanten: Erst Anhänge prüfen, dann Links
                 pdf_path = None
                 filename = None
                 
-                # Wenn PDF-Anhänge vorhanden, diese verwenden (NICHT auch Links verarbeiten!)
-                if pdf_attachments:
+                if lieferant and lieferant.name and 'DTFWorld' in lieferant.name:
+                    # DTFWorld: Ignoriere Anhänge, suche direkt nach Links
+                    msg_info = f"Sync: DTFWorld erkannt - ignoriere PDF-Anhänge, suche nach Links in E-Mail {message_id}..."
+                    print(msg_info)
+                    logger.info(msg_info)
+                    
+                    links = self.extract_links_from_message(message_details)
+                    msg_info = f"Sync: {len(links)} Links gefunden in Nachricht {message_id}"
+                    print(msg_info)
+                    logger.info(msg_info)
+                    if links:
+                        print(f"Sync: Gefundene Links: {[link[:80] + '...' if len(link) > 80 else link for link in links[:3]]}")
+                        logger.info(f"Sync: Erste Links: {links[:3]}")
+                    
+                    if links:
+                        # Versuche PDF von Links herunterzuladen
+                        for idx, link in enumerate(links):
+                            logger.info(f"Sync: Versuche PDF von Link {idx+1}/{len(links)} herunterzuladen: {link[:100]}...")
+                            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                            # Versuche Dateiname aus URL zu extrahieren
+                            # Entferne Query-Parameter für Dateiname
+                            link_clean = link.split('?')[0]
+                            link_filename = link_clean.split('/')[-1]
+                            if not link_filename or len(link_filename) < 3 or len(link_filename) > 200:
+                                link_filename = f"rechnung_dtfworld_{timestamp}.pdf"
+                            elif not link_filename.endswith('.pdf'):
+                                link_filename = f"{link_filename}.pdf"
+                            safe_filename = f"{timestamp}_{link_filename}"
+                            
+                            pdf_path = self.download_pdf_from_url(link, safe_filename)
+                            if pdf_path:
+                                filename = safe_filename
+                                logger.info(f"Sync: PDF erfolgreich von Link heruntergeladen: {pdf_path}")
+                                break
+                            else:
+                                logger.warning(f"Sync: Download von Link fehlgeschlagen: {link[:100]}...")
+                    else:
+                        logger.warning(f"Sync: Keine Links gefunden in Nachricht {message_id}")
+                else:
+                    # Andere Lieferanten: Erst PDF-Anhänge prüfen
+                    print(f"Sync: Suche PDF-Anhänge in E-Mail {message_id}...")
+                    logger.info(f"Sync: Suche PDF-Anhänge in E-Mail {message_id}...")
+                    pdf_attachments = self.extract_pdf_attachments(message_details)
+                    print(f"Sync: {len(pdf_attachments)} PDF-Anhänge gefunden")
+                    logger.info(f"Sync: {len(pdf_attachments)} PDF-Anhänge gefunden")
+                    
+                    # Wenn PDF-Anhänge vorhanden, diese verwenden (NICHT auch Links verarbeiten!)
+                    if pdf_attachments:
                     logger.info(f"Sync: {len(pdf_attachments)} PDF-Anhänge gefunden, verwende diese")
                     pdf_attachment = pdf_attachments[0]
                     filename = pdf_attachment['filename']
