@@ -833,6 +833,26 @@ class GmailService:
                 if lieferant and lieferant.name and 'DPD' in lieferant.name.upper():
                     von_zielkonto_abgebucht = True
                 
+                # Für DTFWorld: Titel auf "DTFWorld" setzen und Rechnungsnummer mit "DW" beginnen lassen
+                titel = pdf_data.get('titel', filename)
+                if lieferant and lieferant.name and 'DTFWorld' in lieferant.name:
+                    titel = 'DTFWorld'
+                    # Stelle sicher, dass Rechnungsnummer mit "DW" beginnt
+                    if rechnungsnummer:
+                        # Entferne führende "DW" falls vorhanden, um Duplikate zu vermeiden
+                        rechnungsnummer_clean = rechnungsnummer.upper().strip()
+                        if rechnungsnummer_clean.startswith('DW'):
+                            rechnungsnummer = rechnungsnummer_clean
+                        else:
+                            # Füge "DW" hinzu, wenn nicht vorhanden
+                            # Entferne führende Nullen und Leerzeichen
+                            rechnungsnummer_clean = rechnungsnummer_clean.lstrip('0').strip()
+                            rechnungsnummer = f"DW{rechnungsnummer_clean}"
+                    else:
+                        # Falls keine Rechnungsnummer gefunden, verwende "DW" + Timestamp
+                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                        rechnungsnummer = f"DW{timestamp[-6:]}"  # Letzte 6 Ziffern des Timestamps
+                
                 # Buchung erstellen
                 buchung = Buchung(
                     typ=lieferant.typ,
@@ -840,7 +860,7 @@ class GmailService:
                     betrag=Decimal(str(pdf_data.get('betrag', 0))),
                     datum=pdf_data.get('datum') or datetime.now().date(),
                     rechnungsnummer=rechnungsnummer,
-                    titel=pdf_data.get('titel', filename),
+                    titel=titel,
                     pdf_pfad=pdf_path,
                     jahr=(pdf_data.get('datum') or datetime.now().date()).year,
                     quelle='Gmail',
