@@ -354,8 +354,11 @@ class GmailService:
     def extract_links_from_message(self, message):
         """Links aus E-Mail extrahieren (für DTFWorld etc.)"""
         links = []
+        import logging
+        logger = logging.getLogger(__name__)
         
         if 'payload' not in message:
+            logger.warning("extract_links_from_message: Kein payload in message")
             return links
         
         def extract_text_from_part(part):
@@ -364,8 +367,8 @@ class GmailService:
             if 'body' in part and 'data' in part['body']:
                 try:
                     text = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8', errors='ignore')
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Fehler beim Dekodieren von Part: {e}")
             if 'parts' in part:
                 for subpart in part['parts']:
                     text += extract_text_from_part(subpart)
@@ -374,20 +377,54 @@ class GmailService:
         payload = message['payload']
         email_text = extract_text_from_part(payload)
         
-        # Suche nach HTTP/HTTPS-Links
-        url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-        found_links = re.findall(url_pattern, email_text)
+        logger.info(f"extract_links_from_message: E-Mail-Text extrahiert, Länge: {len(email_text)}")
         
-        # Filtere Links, die auf PDFs verweisen könnten
+        # Suche nach HTTP/HTTPS-Links - erweiterte Pattern
+        # Pattern 1: Standard HTTP/HTTPS Links
+        url_pattern1 = r'https?://[^\s<>"{}|\\^`\[\]]+'
+        # Pattern 2: Links in HTML href
+        url_pattern2 = r'href=["\']?(https?://[^"\'\s<>]+)["\']?'
+        # Pattern 3: Links mit möglichen Zeilenumbrüchen
+        url_pattern3 = r'https?://[^\s<>"{}|\\^`\[\]]+(?:<[^>]+>)?'
+        
+        found_links = []
+        found_links.extend(re.findall(url_pattern1, email_text, re.IGNORECASE))
+        found_links.extend(re.findall(url_pattern2, email_text, re.IGNORECASE))
+        
+        # Entferne Duplikate
+        found_links = list(set(found_links))
+        
+        logger.info(f"extract_links_from_message: {len(found_links)} Links gefunden")
+        
+        # Alle Links aufnehmen (nicht nur die mit bestimmten Keywords)
+        # Priorisiere aber Links mit relevanten Keywords
+        prioritized_links = []
+        other_links = []
+        
         for link in found_links:
             # Entferne mögliche Anführungszeichen oder Klammern am Ende
-            link = link.rstrip('.,;:!?)>"\'')
-            # Prüfe ob Link auf PDF verweist oder verdächtig ist (z.B. DTFWorld)
-            if '.pdf' in link.lower() or 'download' in link.lower() or 'invoice' in link.lower() or 'rechnung' in link.lower() or 'dtfworld' in link.lower():
-                links.append(link)
-            # Auch generische Links aufnehmen, falls keine PDF-Anhänge gefunden wurden
-            elif link.startswith('http'):
-                links.append(link)
+            link = link.rstrip('.,;:!?)>"\'<>')
+            # Entferne HTML-Tags am Ende
+            link = re.sub(r'<[^>]+>$', '', link)
+            
+            if not link.startswith('http'):
+                continue
+            
+            # Priorisiere Links mit relevanten Keywords
+            link_lower = link.lower()
+            if ('.pdf' in link_lower or 'download' in link_lower or 'invoice' in link_lower or 
+                'rechnung' in link_lower or 'dtfworld' in link_lower or 'bill' in link_lower or
+                'receipt' in link_lower or 'document' in link_lower):
+                prioritized_links.append(link)
+                logger.info(f"extract_links_from_message: Priorisierter Link gefunden: {link}")
+            else:
+                other_links.append(link)
+                logger.debug(f"extract_links_from_message: Anderer Link gefunden: {link}")
+        
+        # Zuerst priorisierte Links, dann andere
+        links = prioritized_links + other_links
+        
+        logger.info(f"extract_links_from_message: {len(prioritized_links)} priorisierte, {len(other_links)} andere Links")
         
         return links
     
@@ -494,18 +531,21 @@ class GmailService:
                     pdf_path = self.download_attachment(message_id, attachment_id, safe_filename)
                 else:
                     # Keine PDF-Anhänge - prüfe ob Links vorhanden sind (z.B. für DTFWorld)
+                    logger.info(f"Sync: Keine PDF-Anhänge gefunden für Nachricht {message_id}, suche nach Links...")
                     links = self.extract_links_from_message(message_details)
-                    logger.info(f"Sync: Keine PDF-Anhänge, aber {len(links)} Links gefunden")
+                    logger.info(f"Sync: {len(links)} Links gefunden in Nachricht {message_id}")
                     
                     if links:
                         # Versuche PDF von Links herunterzuladen
-                        for link in links:
-                            logger.info(f"Sync: Versuche PDF von Link herunterzuladen: {link}")
+                        for idx, link in enumerate(links):
+                            logger.info(f"Sync: Versuche PDF von Link {idx+1}/{len(links)} herunterzuladen: {link}")
                             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                             # Versuche Dateiname aus URL zu extrahieren
                             link_filename = link.split('/')[-1].split('?')[0]
-                            if not link_filename.endswith('.pdf'):
+                            if not link_filename or len(link_filename) < 3:
                                 link_filename = f"rechnung_{timestamp}.pdf"
+                            elif not link_filename.endswith('.pdf'):
+                                link_filename = f"{link_filename}.pdf"
                             safe_filename = f"{timestamp}_{link_filename}"
                             
                             pdf_path = self.download_pdf_from_url(link, safe_filename)
@@ -513,6 +553,10 @@ class GmailService:
                                 filename = safe_filename
                                 logger.info(f"Sync: PDF erfolgreich von Link heruntergeladen: {pdf_path}")
                                 break
+                            else:
+                                logger.warning(f"Sync: Download von Link fehlgeschlagen: {link}")
+                    else:
+                        logger.warning(f"Sync: Keine Links gefunden in Nachricht {message_id}")
                 
                 if not pdf_path:
                     logger.warning(f"Sync: Keine PDF gefunden für Nachricht {message_id}")
