@@ -667,11 +667,19 @@ def artikel_loeschen(id):
 @login_required
 def gmail_sync():
     """Gmail-Synchronisation manuell auslösen"""
+    app.logger.info("="*60)
+    app.logger.info("Gmail-Sync Route aufgerufen")
+    app.logger.info("="*60)
+    print("="*60)
+    print("Gmail-Sync Route aufgerufen")
+    print("="*60)
     try:
         # Gmail-Service initialisieren
+        app.logger.info("Initialisiere Gmail-Service...")
         gmail_service = GmailService()
         
         # Explizit authentifizieren (wichtig im Web-Kontext)
+        app.logger.info("Authentifiziere Gmail-Service...")
         gmail_service._ensure_authenticated()
         
         # Prüfe ob Service initialisiert wurde
