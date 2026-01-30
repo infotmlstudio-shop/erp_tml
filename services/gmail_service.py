@@ -493,6 +493,11 @@ class GmailService:
         """Rechnungen aus Gmail synchronisieren"""
         import logging
         logger = logging.getLogger(__name__)
+        # Stelle sicher, dass Logging auf INFO-Level ist
+        logger.setLevel(logging.INFO)
+        print("="*60)
+        print("Gmail-Synchronisation gestartet")
+        print("="*60)
         logger.info("="*60)
         logger.info("Gmail-Synchronisation gestartet")
         logger.info("="*60)
@@ -512,13 +517,17 @@ class GmailService:
             Lieferant.gmail_label != ''
         ).all()
         
+        print(f"Sync: Gefundene Lieferanten mit Labels: {len(lieferanten)}")
         logger.info(f"Sync: Gefundene Lieferanten mit Labels: {len(lieferanten)}")
         
         # Debug: Zeige IMMER alle Lieferanten (auch inaktive)
         all_lieferanten = Lieferant.query.all()
+        print(f"Sync: ALLE Lieferanten in DB ({len(all_lieferanten)} total):")
         logger.info(f"Sync: ALLE Lieferanten in DB ({len(all_lieferanten)} total):")
         for l in all_lieferanten:
-            logger.info(f"  - '{l.name}' (ID: {l.id}, Typ: {l.typ}, Aktiv: {l.aktiv}, Label: '{l.gmail_label}')")
+            msg = f"  - '{l.name}' (ID: {l.id}, Typ: {l.typ}, Aktiv: {l.aktiv}, Label: '{l.gmail_label}')"
+            print(msg)
+            logger.info(msg)
         
         if len(lieferanten) == 0:
             logger.warning("Sync: KEINE Lieferanten mit Gmail-Labels gefunden!")
@@ -530,12 +539,18 @@ class GmailService:
         
         for idx, lieferant in enumerate(lieferanten):
             # Nachrichten für dieses Label abrufen
-            logger.info(f"Sync: [{idx+1}/{len(lieferanten)}] Verarbeite Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'...")
+            msg = f"Sync: [{idx+1}/{len(lieferanten)}] Verarbeite Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'..."
+            print(msg)
+            logger.info(msg)
             messages = self.get_messages_by_label(lieferant.gmail_label)
-            logger.info(f"Sync: Lieferant '{lieferant.name}' - {len(messages)} E-Mails gefunden")
+            msg = f"Sync: Lieferant '{lieferant.name}' - {len(messages)} E-Mails gefunden"
+            print(msg)
+            logger.info(msg)
             
             if len(messages) == 0:
-                logger.info(f"Sync: Keine E-Mails gefunden für Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'")
+                msg = f"Sync: Keine E-Mails gefunden für Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'"
+                print(msg)
+                logger.info(msg)
                 continue  # Weiter mit nächstem Lieferanten
             
             for idx, msg in enumerate(messages):
