@@ -267,6 +267,32 @@ def ausgaben_zielkonto(buchung_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/ausgaben/<int:buchung_id>/loeschen', methods=['POST'])
+@login_required
+def ausgaben_loeschen(buchung_id):
+    """Ausgabe löschen - nur für Admin"""
+    if current_user.username != 'admin':
+        flash('Nur Administratoren können Ausgaben löschen.', 'error')
+        return redirect(url_for('ausgaben'))
+    
+    try:
+        buchung = Buchung.query.get_or_404(buchung_id)
+        if buchung.typ != 'Ausgabe':
+            flash('Ungültige Buchung.', 'error')
+            return redirect(url_for('ausgaben'))
+        
+        jahr = buchung.jahr
+        db.session.delete(buchung)
+        db.session.commit()
+        
+        flash('Ausgabe erfolgreich gelöscht.', 'success')
+        return redirect(url_for('ausgaben', jahr=jahr))
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Fehler beim Löschen der Ausgabe: {e}")
+        flash('Fehler beim Löschen der Ausgabe.', 'error')
+        return redirect(url_for('ausgaben'))
+
 @app.route('/einnahmen/ueberwiesen/<int:buchung_id>', methods=['POST'])
 @login_required
 def einnahmen_ueberwiesen(buchung_id):
