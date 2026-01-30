@@ -555,21 +555,33 @@ class GmailService:
             
             for idx, msg in enumerate(messages):
                 message_id = msg['id']
-                logger.info(f"Sync: Verarbeite E-Mail {idx+1}/{len(messages)} (ID: {message_id})")
+                msg_info = f"Sync: Verarbeite E-Mail {idx+1}/{len(messages)} (ID: {message_id}) für Lieferant '{lieferant.name}'"
+                print(msg_info)
+                logger.info(msg_info)
                 
                 # Prüfen ob bereits importiert
                 existing = Buchung.query.filter_by(gmail_message_id=message_id).first()
                 if existing:
-                    logger.info(f"Sync: E-Mail {message_id} wurde bereits importiert (Buchung ID: {existing.id})")
+                    msg_info = f"Sync: E-Mail {message_id} wurde bereits importiert (Buchung ID: {existing.id})"
+                    print(msg_info)
+                    logger.info(msg_info)
                     continue
                 
                 # Nachrichtendetails abrufen
+                print(f"Sync: Lade Nachrichtendetails für {message_id}...")
+                logger.info(f"Sync: Lade Nachrichtendetails für {message_id}...")
                 message_details = self.get_message_details(message_id)
                 if not message_details:
+                    print(f"Sync: Konnte Nachrichtendetails nicht laden für {message_id}")
+                    logger.warning(f"Sync: Konnte Nachrichtendetails nicht laden für {message_id}")
                     continue
                 
                 # PDF-Anhänge finden
+                print(f"Sync: Suche PDF-Anhänge in E-Mail {message_id}...")
+                logger.info(f"Sync: Suche PDF-Anhänge in E-Mail {message_id}...")
                 pdf_attachments = self.extract_pdf_attachments(message_details)
+                print(f"Sync: {len(pdf_attachments)} PDF-Anhänge gefunden")
+                logger.info(f"Sync: {len(pdf_attachments)} PDF-Anhänge gefunden")
                 
                 pdf_path = None
                 filename = None
@@ -589,9 +601,16 @@ class GmailService:
                         logger.info(f"Sync: PDF-Anhang erfolgreich heruntergeladen: {pdf_path}")
                 else:
                     # Keine PDF-Anhänge - prüfe ob Links vorhanden sind (z.B. für DTFWorld)
-                    logger.info(f"Sync: Keine PDF-Anhänge gefunden für Nachricht {message_id}, suche nach Links...")
+                    msg_info = f"Sync: Keine PDF-Anhänge gefunden für Nachricht {message_id}, suche nach Links..."
+                    print(msg_info)
+                    logger.info(msg_info)
                     links = self.extract_links_from_message(message_details)
-                    logger.info(f"Sync: {len(links)} Links gefunden in Nachricht {message_id}")
+                    msg_info = f"Sync: {len(links)} Links gefunden in Nachricht {message_id}"
+                    print(msg_info)
+                    logger.info(msg_info)
+                    if links:
+                        print(f"Sync: Gefundene Links: {[link[:80] + '...' if len(link) > 80 else link for link in links[:3]]}")
+                        logger.info(f"Sync: Erste Links: {links[:3]}")
                     
                     if links:
                         # Versuche PDF von Links herunterzuladen
@@ -623,13 +642,19 @@ class GmailService:
                     continue
                 
                 # PDF analysieren
+                print(f"Sync: Analysiere PDF: {pdf_path}")
+                logger.info(f"Sync: Analysiere PDF: {pdf_path}")
                 pdf_data = self.pdf_service.extract_invoice_data(pdf_path)
                 
                 if not pdf_data:
-                    logger.warning(f"Sync: PDF-Analyse fehlgeschlagen für {filename}")
+                    msg = f"Sync: PDF-Analyse fehlgeschlagen für {filename}"
+                    print(msg)
+                    logger.warning(msg)
                     continue
                 
-                logger.info(f"Sync: PDF analysiert - Betrag: {pdf_data.get('betrag')}, Datum: {pdf_data.get('datum')}, Rechnungsnummer: {pdf_data.get('rechnungsnummer')}")
+                msg = f"Sync: PDF analysiert - Betrag: {pdf_data.get('betrag')}, Datum: {pdf_data.get('datum')}, Rechnungsnummer: {pdf_data.get('rechnungsnummer')}"
+                print(msg)
+                logger.info(msg)
                 
                 # Rechnungsnummer aus Dateiname extrahieren falls nicht im PDF gefunden
                 rechnungsnummer = pdf_data.get('rechnungsnummer', '')
