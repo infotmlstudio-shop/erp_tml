@@ -725,43 +725,43 @@ class GmailService:
                         pdf_path = self.download_attachment(message_id, attachment_id, safe_filename)
                         if pdf_path:
                             logger.info(f"Sync: PDF-Anhang erfolgreich heruntergeladen: {pdf_path}")
-                else:
-                    # Keine PDF-Anhänge - prüfe ob Links vorhanden sind (z.B. für DTFWorld)
-                    msg_info = f"Sync: Keine PDF-Anhänge gefunden für Nachricht {message_id}, suche nach Links..."
-                    print(msg_info)
-                    logger.info(msg_info)
-                    links = self.extract_links_from_message(message_details)
-                    msg_info = f"Sync: {len(links)} Links gefunden in Nachricht {message_id}"
-                    print(msg_info)
-                    logger.info(msg_info)
-                    if links:
-                        print(f"Sync: Gefundene Links: {[link[:80] + '...' if len(link) > 80 else link for link in links[:3]]}")
-                        logger.info(f"Sync: Erste Links: {links[:3]}")
-                    
-                    if links:
-                        # Versuche PDF von Links herunterzuladen
-                        for idx, link in enumerate(links):
-                            logger.info(f"Sync: Versuche PDF von Link {idx+1}/{len(links)} herunterzuladen: {link[:100]}...")
-                            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                            # Versuche Dateiname aus URL zu extrahieren
-                            # Entferne Query-Parameter für Dateiname
-                            link_clean = link.split('?')[0]
-                            link_filename = link_clean.split('/')[-1]
-                            if not link_filename or len(link_filename) < 3 or len(link_filename) > 200:
-                                link_filename = f"rechnung_dtfworld_{timestamp}.pdf"
-                            elif not link_filename.endswith('.pdf'):
-                                link_filename = f"{link_filename}.pdf"
-                            safe_filename = f"{timestamp}_{link_filename}"
-                            
-                            pdf_path = self.download_pdf_from_url(link, safe_filename)
-                            if pdf_path:
-                                filename = safe_filename
-                                logger.info(f"Sync: PDF erfolgreich von Link heruntergeladen: {pdf_path}")
-                                break
-                            else:
-                                logger.warning(f"Sync: Download von Link fehlgeschlagen: {link[:100]}...")
                     else:
-                        logger.warning(f"Sync: Keine Links gefunden in Nachricht {message_id}")
+                        # Keine PDF-Anhänge - prüfe ob Links vorhanden sind (z.B. für DTFWorld)
+                        msg_info = f"Sync: Keine PDF-Anhänge gefunden für Nachricht {message_id}, suche nach Links..."
+                        print(msg_info)
+                        logger.info(msg_info)
+                        links = self.extract_links_from_message(message_details)
+                        msg_info = f"Sync: {len(links)} Links gefunden in Nachricht {message_id}"
+                        print(msg_info)
+                        logger.info(msg_info)
+                        if links:
+                            print(f"Sync: Gefundene Links: {[link[:80] + '...' if len(link) > 80 else link for link in links[:3]]}")
+                            logger.info(f"Sync: Erste Links: {links[:3]}")
+                        
+                        if links:
+                            # Versuche PDF von Links herunterzuladen
+                            for idx, link in enumerate(links):
+                                logger.info(f"Sync: Versuche PDF von Link {idx+1}/{len(links)} herunterzuladen: {link[:100]}...")
+                                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                                # Versuche Dateiname aus URL zu extrahieren
+                                # Entferne Query-Parameter für Dateiname
+                                link_clean = link.split('?')[0]
+                                link_filename = link_clean.split('/')[-1]
+                                if not link_filename or len(link_filename) < 3 or len(link_filename) > 200:
+                                    link_filename = f"rechnung_{timestamp}.pdf"
+                                elif not link_filename.endswith('.pdf'):
+                                    link_filename = f"{link_filename}.pdf"
+                                safe_filename = f"{timestamp}_{link_filename}"
+                                
+                                pdf_path = self.download_pdf_from_url(link, safe_filename)
+                                if pdf_path:
+                                    filename = safe_filename
+                                    logger.info(f"Sync: PDF erfolgreich von Link heruntergeladen: {pdf_path}")
+                                    break
+                                else:
+                                    logger.warning(f"Sync: Download von Link fehlgeschlagen: {link[:100]}...")
+                        else:
+                            logger.warning(f"Sync: Keine Links gefunden in Nachricht {message_id}")
                 
                 if not pdf_path:
                     logger.warning(f"Sync: Keine PDF gefunden für Nachricht {message_id}")
