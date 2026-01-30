@@ -237,21 +237,31 @@ class GmailService:
     
     def get_messages_by_label(self, label_name):
         """E-Mails nach Label abrufen"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         self._ensure_authenticated()
         if not self.service:
+            logger.warning("Gmail-Service konnte nicht initialisiert werden")
             print("Warnung: Gmail-Service konnte nicht initialisiert werden")
             return []
         
         try:
             # Label-ID finden
             labels = self.service.users().labels().list(userId='me').execute()
+            logger.info(f"get_messages_by_label: Suche nach Label '{label_name}'")
+            logger.info(f"get_messages_by_label: Verfügbare Labels: {[l['name'] for l in labels.get('labels', [])]}")
+            
             label_id = None
             for label in labels.get('labels', []):
                 if label['name'] == label_name:
                     label_id = label['id']
+                    logger.info(f"get_messages_by_label: Label '{label_name}' gefunden (ID: {label_id})")
                     break
             
             if not label_id:
+                logger.warning(f"get_messages_by_label: Label '{label_name}' NICHT gefunden!")
+                logger.warning(f"get_messages_by_label: Verfügbare Labels: {[l['name'] for l in labels.get('labels', [])]}")
                 return []
             
             # Nachrichten abrufen
@@ -498,8 +508,11 @@ class GmailService:
         ).all()
         
         logger.info(f"Sync: Gefundene Lieferanten mit Labels: {len(lieferanten)}")
+        if len(lieferanten) == 0:
+            logger.warning("Sync: KEINE Lieferanten mit Gmail-Labels gefunden!")
+            logger.warning("Sync: Prüfe ob Lieferanten aktiv sind und gmail_label gesetzt ist")
         for lieferant in lieferanten:
-            logger.info(f"Sync: Prüfe Lieferant '{lieferant.name}' mit Label '{lieferant.gmail_label}'")
+            logger.info(f"Sync: Prüfe Lieferant '{lieferant.name}' (ID: {lieferant.id}, Typ: {lieferant.typ}, Aktiv: {lieferant.aktiv}) mit Label '{lieferant.gmail_label}'")
         
         for lieferant in lieferanten:
             # Nachrichten für dieses Label abrufen
