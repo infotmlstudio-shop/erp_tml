@@ -513,14 +513,18 @@ class GmailService:
         ).all()
         
         logger.info(f"Sync: Gefundene Lieferanten mit Labels: {len(lieferanten)}")
+        
+        # Debug: Zeige IMMER alle Lieferanten (auch inaktive)
+        all_lieferanten = Lieferant.query.all()
+        logger.info(f"Sync: ALLE Lieferanten in DB ({len(all_lieferanten)} total):")
+        for l in all_lieferanten:
+            logger.info(f"  - '{l.name}' (ID: {l.id}, Typ: {l.typ}, Aktiv: {l.aktiv}, Label: '{l.gmail_label}')")
+        
         if len(lieferanten) == 0:
             logger.warning("Sync: KEINE Lieferanten mit Gmail-Labels gefunden!")
             logger.warning("Sync: Prüfe ob Lieferanten aktiv sind und gmail_label gesetzt ist")
-            # Debug: Zeige ALLE Lieferanten
-            all_lieferanten = Lieferant.query.all()
-            logger.warning(f"Sync: ALLE Lieferanten in DB: {[(l.name, l.aktiv, l.gmail_label) for l in all_lieferanten]}")
         else:
-            logger.info("Sync: Gefundene Lieferanten:")
+            logger.info("Sync: Gefundene Lieferanten für Synchronisation:")
             for lieferant in lieferanten:
                 logger.info(f"  - '{lieferant.name}' (ID: {lieferant.id}, Typ: {lieferant.typ}, Aktiv: {lieferant.aktiv}, Label: '{lieferant.gmail_label}')")
         
