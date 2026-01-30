@@ -283,6 +283,32 @@ def einnahmen_ueberwiesen(buchung_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/einnahmen/<int:buchung_id>/loeschen', methods=['POST'])
+@login_required
+def einnahmen_loeschen(buchung_id):
+    """Einnahme löschen - nur für Admin"""
+    if current_user.username != 'admin':
+        flash('Nur Administratoren können Einnahmen löschen.', 'error')
+        return redirect(url_for('einnahmen'))
+    
+    try:
+        buchung = Buchung.query.get_or_404(buchung_id)
+        if buchung.typ != 'Einnahme':
+            flash('Ungültige Buchung.', 'error')
+            return redirect(url_for('einnahmen'))
+        
+        jahr = buchung.jahr
+        db.session.delete(buchung)
+        db.session.commit()
+        
+        flash('Einnahme erfolgreich gelöscht.', 'success')
+        return redirect(url_for('einnahmen', jahr=jahr))
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Fehler beim Löschen der Einnahme: {e}")
+        flash('Fehler beim Löschen der Einnahme.', 'error')
+        return redirect(url_for('einnahmen'))
+
 @app.route('/ausgaben/neu', methods=['GET', 'POST'])
 @login_required
 def ausgaben_neu():

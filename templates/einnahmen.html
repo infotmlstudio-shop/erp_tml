@@ -24,6 +24,9 @@
                             <th style="width: 15%;" class="text-center">Überwiesen am</th>
                             <th style="width: 10%;">Quelle</th>
                             <th style="width: 8%;">PDF</th>
+                            {% if current_user.username == 'admin' %}
+                            <th style="width: 7%;">Aktionen</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -58,6 +61,15 @@
                                 -
                             {% endif %}
                         </td>
+                        {% if current_user.username == 'admin' %}
+                        <td data-label="Aktionen">
+                            <form method="POST" action="{{ url_for('einnahmen_loeschen', buchung_id=buchung.id) }}" class="d-inline" onsubmit="return confirm('Möchten Sie diese Einnahme wirklich löschen?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
