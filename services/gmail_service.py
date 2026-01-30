@@ -837,21 +837,61 @@ class GmailService:
                 titel = pdf_data.get('titel', filename)
                 if lieferant and lieferant.name and 'DTFWorld' in lieferant.name:
                     titel = 'DTFWorld'
-                    # Stelle sicher, dass Rechnungsnummer mit "DW" beginnt
-                    if rechnungsnummer:
-                        # Entferne führende "DW" falls vorhanden, um Duplikate zu vermeiden
-                        rechnungsnummer_clean = rechnungsnummer.upper().strip()
-                        if rechnungsnummer_clean.startswith('DW'):
-                            rechnungsnummer = rechnungsnummer_clean
+                    
+                    # Für DTFWorld: Suche speziell nach "DW" gefolgt von Zahlen (z.B. "DW35332")
+                    # Extrahiere den Text aus dem PDF erneut, um nach dem richtigen Format zu suchen
+                    import re as re_module
+                    try:
+                        import pdfplumber
+                        with pdfplumber.open(pdf_path) as pdf:
+                            full_text = ""
+                            for page in pdf.pages:
+                                full_text += page.extract_text() or ""
+                        
+                        # Suche nach "DW" gefolgt von 3-6 Ziffern (z.B. "DW35332")
+                        dw_pattern = re_module.search(r'DW\s*(\d{3,6})', full_text, re_module.IGNORECASE)
+                        if dw_pattern:
+                            dw_number = dw_pattern.group(1)
+                            rechnungsnummer = f"DW{dw_number}"
+                            logger.info(f"Sync: DTFWorld Rechnungsnummer gefunden: {rechnungsnummer}")
+                        elif rechnungsnummer:
+                            # Falls bereits eine Rechnungsnummer gefunden wurde, prüfe ob sie "DW" enthält
+                            rechnungsnummer_clean = rechnungsnummer.upper().strip()
+                            # Suche nach "DW" gefolgt von Zahlen in der gefundenen Rechnungsnummer
+                            dw_match = re_module.search(r'DW\s*(\d{3,6})', rechnungsnummer_clean, re_module.IGNORECASE)
+                            if dw_match:
+                                dw_number = dw_match.group(1)
+                                rechnungsnummer = f"DW{dw_number}"
+                                logger.info(f"Sync: DTFWorld Rechnungsnummer aus vorhandener Nummer extrahiert: {rechnungsnummer}")
+                            elif rechnungsnummer_clean.startswith('DW'):
+                                # Bereits korrektes Format
+                                rechnungsnummer = rechnungsnummer_clean
+                            else:
+                                # Suche nach Zahlen in der Rechnungsnummer und füge "DW" hinzu
+                                numbers = re_module.findall(r'\d{3,6}', rechnungsnummer_clean)
+                                if numbers:
+                                    # Nimm die erste gefundene Zahl (wahrscheinlich die Rechnungsnummer)
+                                    rechnungsnummer = f"DW{numbers[0]}"
+                                    logger.info(f"Sync: DTFWorld Rechnungsnummer aus Zahlen extrahiert: {rechnungsnummer}")
+                                else:
+                                    # Fallback: Füge "DW" hinzu
+                                    rechnungsnummer_clean = rechnungsnummer_clean.lstrip('0').strip()
+                                    rechnungsnummer = f"DW{rechnungsnummer_clean}"
                         else:
-                            # Füge "DW" hinzu, wenn nicht vorhanden
-                            # Entferne führende Nullen und Leerzeichen
-                            rechnungsnummer_clean = rechnungsnummer_clean.lstrip('0').strip()
-                            rechnungsnummer = f"DW{rechnungsnummer_clean}"
-                    else:
-                        # Falls keine Rechnungsnummer gefunden, verwende "DW" + Timestamp
-                        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-                        rechnungsnummer = f"DW{timestamp[-6:]}"  # Letzte 6 Ziffern des Timestamps
+                            # Falls keine Rechnungsnummer gefunden, verwende "DW" + Timestamp
+                            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                            rechnungsnummer = f"DW{timestamp[-6:]}"  # Letzte 6 Ziffern des Timestamps
+                            logger.warning(f"Sync: Keine DTFWorld Rechnungsnummer gefunden, verwende Fallback: {rechnungsnummer}")
+                    except Exception as e:
+                        logger.error(f"Sync: Fehler beim Extrahieren der DTFWorld Rechnungsnummer: {e}")
+                        # Fallback: Verwende vorhandene Rechnungsnummer oder erstelle eine
+                        if rechnungsnummer:
+                            rechnungsnummer_clean = rechnungsnummer.upper().strip()
+                            if not rechnungsnummer_clean.startswith('DW'):
+                                rechnungsnummer = f"DW{rechnungsnummer_clean.lstrip('0').strip()}"
+                        else:
+                            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                            rechnungsnummer = f"DW{timestamp[-6:]}"
                 
                 # Buchung erstellen
                 buchung = Buchung(
