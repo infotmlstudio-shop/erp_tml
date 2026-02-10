@@ -363,8 +363,13 @@ class GmailService:
             file_data = base64.urlsafe_b64decode(attachment['data'])
             
             # Datei speichern
+            # Stelle sicher, dass filename keinen Pfad enthält
+            safe_filename = os.path.basename(filename)  # Entfernt Pfad-Trenner
+            # Entferne weitere unsichere Zeichen
+            safe_filename = re.sub(r'[<>:"|?*\\]', '_', safe_filename)
+            
             os.makedirs(upload_folder, exist_ok=True)
-            filepath = os.path.join(upload_folder, filename)
+            filepath = os.path.join(upload_folder, safe_filename)
             
             with open(filepath, 'wb') as f:
                 f.write(file_data)
@@ -520,8 +525,13 @@ class GmailService:
                 upload_folder = os.environ.get('UPLOAD_FOLDER', 'data/rechnungen')
             
             # Datei speichern
+            # Stelle sicher, dass filename keinen Pfad enthält
+            safe_filename = os.path.basename(filename)  # Entfernt Pfad-Trenner
+            # Entferne weitere unsichere Zeichen
+            safe_filename = re.sub(r'[<>:"|?*\\]', '_', safe_filename)
+            
             os.makedirs(upload_folder, exist_ok=True)
-            filepath = os.path.join(upload_folder, filename)
+            filepath = os.path.join(upload_folder, safe_filename)
             
             with open(filepath, 'wb') as f:
                 f.write(response.content)
@@ -793,9 +803,15 @@ class GmailService:
                         filename = pdf_attachment['filename']
                         attachment_id = pdf_attachment['attachment_id']
                         
+                        # Dateiname bereinigen: Entferne Pfad-Trenner und unsichere Zeichen
+                        # Nur den Dateinamen ohne Pfad verwenden
+                        clean_filename = os.path.basename(filename)  # Entfernt Pfad
+                        # Entferne weitere unsichere Zeichen
+                        clean_filename = re.sub(r'[<>:"|?*\\/]', '_', clean_filename)
+                        
                         # PDF herunterladen
                         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                        safe_filename = f"{timestamp}_{filename}"
+                        safe_filename = f"{timestamp}_{clean_filename}"
                         pdf_path = self.download_attachment(message_id, attachment_id, safe_filename)
                         if pdf_path:
                             logger.info(f"Sync: PDF-Anhang erfolgreich heruntergeladen: {pdf_path}")
