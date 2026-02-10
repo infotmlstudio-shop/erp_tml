@@ -118,20 +118,63 @@ class GmailService:
             print(f"Token-Datei nicht gefunden: {token_path}")
             creds = None
         
-        # Wenn keine gültigen Credentials vorhanden, OAuth-Flow starten
-        if not creds or not creds.valid:
-            # Versuche Token zu refreshen falls abgelaufen
-            if creds and creds.expired and creds.refresh_token:
+        # Prüfe ob Token abgelaufen ist oder bald abläuft (innerhalb der nächsten 5 Minuten)
+        # und refreshe es proaktiv
+        # WICHTIG: Access-Tokens sind normalerweise nur 1 Stunde gültig!
+        # Der Refresh-Token kann verwendet werden, um neue Access-Tokens zu erhalten
+        if creds and creds.refresh_token:
+            from datetime import timedelta
+            from datetime import timezone
+            should_refresh = False
+            
+            if creds.expired:
+                logger.info("Token ist abgelaufen, versuche Refresh...")
+                should_refresh = True
+            elif creds.expiry:
+                # Prüfe ob Token in den nächsten 5 Minuten abläuft
+                # Stelle sicher, dass beide Zeiten in UTC sind
+                now_utc = datetime.now(timezone.utc)
+                if creds.expiry.tzinfo is None:
+                    # Wenn expiry keine Zeitzone hat, nehme an, dass es UTC ist
+                    expiry_utc = creds.expiry.replace(tzinfo=timezone.utc)
+                else:
+                    expiry_utc = creds.expiry
+                
+                time_until_expiry = expiry_utc - now_utc
+                logger.info(f"Token-Status: Ablaufzeit: {expiry_utc}, Jetzt: {now_utc}, Verbleibend: {time_until_expiry}")
+                
+                if time_until_expiry < timedelta(minutes=5):
+                    logger.info(f"Token läuft in {time_until_expiry} ab, refreshe proaktiv...")
+                    should_refresh = True
+            
+            if should_refresh:
                 try:
-                    logger.info("Token abgelaufen, versuche Refresh...")
                     logger.info(f"Refresh-Token vorhanden: {bool(creds.refresh_token)}")
+                    logger.info(f"Token-Ablaufzeit vor Refresh: {creds.expiry}")
                     creds.refresh(Request())
-                    logger.info("Token erfolgreich aktualisiert")
+                    logger.info(f"Token erfolgreich aktualisiert. Neue Ablaufzeit: {creds.expiry}")
                     # Aktualisiertes Token speichern - WICHTIG: Refresh-Token beibehalten
                     os.makedirs(os.path.dirname(token_path), exist_ok=True)
+                    # Stelle sicher, dass Refresh-Token erhalten bleibt
+                    token_json = creds.to_json()
+                    token_data = json.loads(token_json)
+                    # Wenn Refresh-Token fehlt, versuche es aus der alten Datei zu holen
+                    if not token_data.get('refresh_token') and os.path.exists(token_path):
+                        try:
+                            with open(token_path, 'r') as f:
+                                old_token_data = json.load(f)
+                                if old_token_data.get('refresh_token'):
+                                    token_data['refresh_token'] = old_token_data['refresh_token']
+                                    logger.info("Refresh-Token aus alter Datei übernommen")
+                        except Exception as e:
+                            logger.warning(f"Konnte alten Token nicht lesen: {e}")
+                    
                     with open(token_path, 'w') as token:
-                        token.write(creds.to_json())
+                        token.write(json.dumps(token_data))
                     logger.info("Aktualisiertes Token gespeichert")
+                    # Lade Credentials neu, um sicherzustellen, dass sie gültig sind
+                    creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+                    logger.info(f"Token nach Refresh geladen - Gültig: {creds.valid}, Abgelaufen: {creds.expired}")
                 except Exception as e:
                     logger.error(f"Fehler beim Token-Refresh: {e}")
                     import traceback
@@ -142,7 +185,10 @@ class GmailService:
                         logger.error("Refresh-Token ist ungültig oder abgelaufen. Neuer OAuth-Flow erforderlich.")
                         print("Refresh-Token ist ungültig. Bitte erstellen Sie ein neues Token.")
                     creds = None
-            elif creds and creds.expired and not creds.refresh_token:
+        
+        # Wenn keine gültigen Credentials vorhanden, OAuth-Flow starten
+        if not creds or not creds.valid:
+            if creds and creds.expired and not creds.refresh_token:
                 logger.warning("Token abgelaufen, aber kein Refresh-Token vorhanden")
                 print("Token abgelaufen, aber kein Refresh-Token vorhanden. Neuer OAuth-Flow erforderlich.")
                 creds = None
